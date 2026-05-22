@@ -121,6 +121,7 @@ def diff_extracted_vs_raw(
     extracted: list[FieldRecord],
     raw_explore: dict[str, Any],
     model: str,
+    manifest: Any = None,
 ) -> DiffReport:
     """Compare extracted records against a freshly-derived expected set.
 
@@ -130,7 +131,7 @@ def diff_extracted_vs_raw(
         * per-field column values (excluding ``NON_DETERMINISTIC_COLUMNS``)
     """
     explore_name = raw_explore.get("name", "?")
-    expected = flatten_explore(raw_explore, model)
+    expected = flatten_explore(raw_explore, model, manifest)
 
     report = DiffReport(
         model=model,

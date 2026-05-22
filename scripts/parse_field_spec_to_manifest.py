@@ -40,6 +40,22 @@ KNOWN_DEFAULT_OVERRIDES: dict[str, Any] = {
     "can_filter": True,
 }
 
+# Per-name api_source overrides: forces a column to read from a different
+# manifest path than FIELD_SPEC.md declares. Used when the docs describe the
+# "intended" source but the runtime needs a different (more reliable) one.
+# Applied AFTER FIELD_SPEC parsing -- keeps regen idempotent on fixes that
+# exist outside the spec doc.
+#
+# Set a value to None to STRIP that key from the parsed entry (use for
+# fallback_source when the override eliminates the need for a fallback).
+KNOWN_API_OVERRIDES: dict[str, dict[str, Any]] = {
+    # FIELD_SPEC.md docs "explore.model_name" but the API response's nested
+    # explore.model_name is nullable per swagger and was the root cause of
+    # the duplication bug. context.model_name is the extraction loop's
+    # iteration variable -- always populated, never null.
+    "model_name": {"api_source": "context.model_name", "fallback_source": None},
+}
+
 # Type → default-value mapping (when no override).
 TYPE_DEFAULTS: dict[str, Any] = {
     "str": "",
@@ -229,6 +245,15 @@ def parse_spec(spec_text: str) -> tuple[list[dict], list[dict], list[str]]:
                     entry["fallback_source"] = fallback
                 entry["default"] = _default_for(name, type_)
                 entry["description"] = notes
+                # Apply api_source overrides for known cases where the spec
+                # doc is intentionally inaccurate (e.g. model_name: context
+                # vs explore -- see KNOWN_API_OVERRIDES docstring).
+                if name in KNOWN_API_OVERRIDES:
+                    for k, v in KNOWN_API_OVERRIDES[name].items():
+                        if v is None:
+                            entry.pop(k, None)
+                        else:
+                            entry[k] = v
                 columns.append(entry)
 
             elif current_table_kind in ("Source", "Computed From"):
@@ -302,6 +327,22 @@ def validate(columns: list[dict], derived: list[dict], exclusions: list[str]) ->
                 f"override for {ovname!r} not applied: got default={match.get('default')!r}, "
                 f"expected {ovval!r}"
             )
+    for ovname, overrides in KNOWN_API_OVERRIDES.items():
+        match = next((c for c in columns if c["name"] == ovname), None)
+        if match is None:
+            errors.append(f"api-override target column {ovname!r} not found")
+            continue
+        for k, expected in overrides.items():
+            actual = match.get(k)
+            if expected is None:
+                if k in match:
+                    errors.append(
+                        f"api-override {ovname!r}.{k!r}: expected absent, got {actual!r}"
+                    )
+            elif actual != expected:
+                errors.append(
+                    f"api-override {ovname!r}.{k!r}: got {actual!r}, expected {expected!r}"
+                )
     # Soft warning only
     if len(exclusions) != EXPECTED_EXCLUSION_COUNT:
         print(

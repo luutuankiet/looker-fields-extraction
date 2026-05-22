@@ -1,6 +1,7 @@
 """Generated FieldRecord - DO NOT EDIT.
 
 Regenerate via: .venv/bin/python scripts/regen_fieldrecord.py
+           or: looker-fields regen-types (writes to XDG cache)
 Source:         src/looker_fields/manifest/fields.yaml
 
 The manifest is the contract; this file projects it into a typed

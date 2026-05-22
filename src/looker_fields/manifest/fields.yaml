@@ -19,7 +19,7 @@ columns:
   description: Field-level preferred; falls back to explore-level
 - name: model_name
   type: str
-  api_source: explore.model_name
+  api_source: context.model_name
   default: ''
   description: Always from explore context — THE fix for duplication
 - name: explore_name

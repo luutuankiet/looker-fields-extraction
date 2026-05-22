@@ -26,6 +26,11 @@ def extract(
     sync: bool = typer.Option(False, "--sync", help="Use synchronous mode (no async)"),
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+    manifest_path: Optional[Path] = typer.Option(
+        None,
+        "--manifest-path",
+        help="Path to manifest YAML override (default: 4-step chain CLI>env>XDG>bundled)",
+    ),
 ) -> None:
     """Extract all field metadata from the configured Looker instance."""
     logging.basicConfig(
@@ -35,27 +40,30 @@ def extract(
     from .config import load_settings
     from .client import LookerClient
     from .extract import extract_all
+    from .manifest import ManifestSpec, load_manifest
     from .output import get_writer
     from .schema import FieldRecord
 
     settings = load_settings(env_file)
     typer.echo(f"Connecting to {settings.looker_base_url}...")
 
+    manifest = ManifestSpec.model_validate(load_manifest(manifest_path))
+
     async def _run() -> None:
         async with LookerClient(settings, concurrency=concurrency) as client:
-            # Collect all records first for seen-in enrichment
             all_records: list[FieldRecord] = []
             async for record in extract_all(
-                client, model_filter=model, explore_filter=explore
+                client,
+                model_filter=model,
+                explore_filter=explore,
+                manifest=manifest,
             ):
                 all_records.append(record)
 
-            # Enrich with cross-model/explore visibility stats
             from .extract import enrich_seen_in
 
             enrich_seen_in(all_records)
 
-            # Write enriched output
             writer = get_writer(format, output)
             writer.write_records(all_records)
             writer.close()
@@ -73,12 +81,17 @@ def verify(
     ),
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+    manifest_path: Optional[Path] = typer.Option(
+        None,
+        "--manifest-path",
+        help="Path to manifest YAML override (default: 4-step resolution chain)",
+    ),
 ) -> None:
     """Verify extracted fields against live API for a specific explore.
 
     Re-fetches the explore from the API, re-runs the extractor's flatten_explore
-    over the fresh response, and diffs the result against ``--output``. Exit 0
-    if the diff is clean, exit 1 otherwise.
+    over the fresh response (using the same manifest), and diffs the result
+    against ``--output``. Exit 0 if the diff is clean, exit 1 otherwise.
     """
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
@@ -86,6 +99,7 @@ def verify(
     )
     from .config import load_settings
     from .client import LookerClient
+    from .manifest import ManifestSpec, load_manifest
     from .verify import diff_extracted_vs_raw, load_extracted_records
 
     if not output.exists():
@@ -94,6 +108,8 @@ def verify(
 
     settings = load_settings(env_file)
     typer.echo(f"Verifying {model}::{explore} against {output}")
+
+    manifest = ManifestSpec.model_validate(load_manifest(manifest_path))
 
     async def _run() -> int:
         extracted = load_extracted_records(output, model, explore)
@@ -105,7 +121,7 @@ def verify(
             return 2
         async with LookerClient(settings) as client:
             raw = await client.lookml_model_explore(model, explore)
-        report = diff_extracted_vs_raw(extracted, raw, model)
+        report = diff_extracted_vs_raw(extracted, raw, model, manifest=manifest)
         typer.echo(report.render())
         return 0 if report.is_clean else 1
 
@@ -156,14 +172,10 @@ def refresh_schema(
     ),
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
 ) -> None:
-    """Fetch live swagger.json from the configured Looker instance and persist it.
+    """Fetch live swagger.json, persist it, run both drift detectors.
 
-    Default target is the XDG user config path. Once written, the loader's
-    XDG step picks it up automatically on the next run (precedence chain:
-    CLI flag > LOOKER_SWAGGER_PATH env > XDG > bundled baseline).
-
-    After writing, runs ``validate_schema_drift`` against the new spec and
-    prints any drift warnings.
+    Drift v1: swagger-vs-extractor-required-paths (REQUIRED_*_PROPERTIES).
+    Drift v2: manifest-vs-swagger (api_source paths the swagger no longer carries).
     """
     from .config import load_settings
     from .client import LookerClient
@@ -186,7 +198,125 @@ def refresh_schema(
         else:
             typer.echo("No drift warnings.")
 
+        from .manifest import ManifestSpec, load_manifest, validate_manifest_drift
+
+        manifest = ManifestSpec.model_validate(load_manifest())
+        m_warnings = validate_manifest_drift(manifest, spec)
+        if m_warnings:
+            typer.echo(f"\n{len(m_warnings)} manifest drift warning(s):")
+            for w in m_warnings:
+                typer.echo(f"  WARN: {w}")
+        else:
+            typer.echo("No manifest drift warnings.")
+
     asyncio.run(_run())
+
+
+@app.command("refresh-manifest")
+def refresh_manifest(
+    env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
+    manifest_path: Optional[Path] = typer.Option(
+        None,
+        "--manifest-path",
+        help="Path to manifest YAML to check (default: 4-step resolution chain)",
+    ),
+) -> None:
+    """Diff manifest against live swagger; report drift + suggest additions.
+
+    Surfaces two directions of drift:
+      1. Manifest -> Swagger: api_source paths the swagger no longer carries (drift v2)
+      2. Swagger -> Manifest: swagger attrs the manifest does not reference yet
+
+    Does NOT auto-write. Use suggestions to manually edit the manifest YAML
+    (and KNOWN_API_OVERRIDES in scripts/parse_field_spec_to_manifest.py if
+    you want regen-from-spec to preserve the fix).
+    """
+    from .config import load_settings
+    from .client import LookerClient
+    from .manifest import (
+        ManifestSpec,
+        load_manifest,
+        suggest_manifest_additions,
+        validate_manifest_drift,
+    )
+
+    settings = load_settings(env_file)
+    typer.echo(f"Connecting to {settings.looker_base_url}...")
+
+    async def _run() -> None:
+        async with LookerClient(settings) as client:
+            spec = await client.get_swagger()
+        manifest = ManifestSpec.model_validate(load_manifest(manifest_path))
+
+        drift_warnings = validate_manifest_drift(manifest, spec)
+        if drift_warnings:
+            typer.echo(
+                f"\n{len(drift_warnings)} drift warning(s) -- manifest references "
+                f"missing swagger paths:"
+            )
+            for w in drift_warnings:
+                typer.echo(f"  WARN: {w}")
+        else:
+            typer.echo("\nNo drift: every manifest api_source resolves against swagger.")
+
+        additions = suggest_manifest_additions(manifest, spec)
+        if additions:
+            typer.echo(
+                f"\n{len(additions)} addition suggestion(s) -- swagger declares but "
+                f"manifest does not reference:"
+            )
+            for a in additions:
+                typer.echo(f"  + {a}")
+        else:
+            typer.echo("\nNo additions: manifest covers all swagger paths.")
+
+    asyncio.run(_run())
+
+
+@app.command("regen-types")
+def regen_types(
+    output: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Target path for regenerated types.py (default: XDG user cache)",
+    ),
+    manifest_path: Optional[Path] = typer.Option(
+        None,
+        "--manifest-path",
+        help="Path to manifest YAML override (default: 4-step resolution chain)",
+    ),
+) -> None:
+    """Regenerate FieldRecord from the manifest, writing to XDG cache by default.
+
+    The regenerated types.py is dynamic-imported on next startup, replacing
+    the bundled FieldRecord. Use this when overrides extend or modify the
+    manifest schema and you want downstream consumers (pydantic validation,
+    JSONL serialization) to honor the override.
+
+    To revert to bundled: rm ~/.cache/looker-fields/_fieldrecord/types.py
+    """
+    import platformdirs
+
+    from ._fieldrecord.codegen import regenerate
+    from .manifest.loader import resolve_manifest_source
+
+    source = resolve_manifest_source(manifest_path)
+    assert source.path is not None
+    typer.echo(f"Manifest source: {source}")
+
+    target = output or (
+        Path(platformdirs.user_cache_dir("looker-fields", appauthor=False))
+        / "_fieldrecord"
+        / "types.py"
+    )
+
+    path, bytes_written = regenerate(source.path, target)
+    typer.echo(f"Wrote {path} ({bytes_written} bytes)")
+    typer.echo(
+        "Next run will dynamic-import this file instead of the bundled types.py.\n"
+        f"To revert: rm {path}"
+    )
 
 
 @app.command()

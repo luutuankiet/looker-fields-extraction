@@ -1,4 +1,11 @@
-"""Core field extraction logic."""
+"""Core field extraction logic -- orchestrates per-field projection.
+
+``flatten_field`` has been removed in the manifest-native pivot.
+``flatten_explore`` now validates the raw API response through
+``LookmlModelExplore`` + ``LookmlModelExploreField`` (the input tripwire)
+and projects each field via ``projection.project_field`` using the
+manifest as the contract.
+"""
 
 from __future__ import annotations
 
@@ -7,107 +14,49 @@ import logging
 from collections import defaultdict
 from typing import Any, AsyncIterator
 
-from ._swagger.types import LookmlModelExploreField
+from ._swagger.types import LookmlModelExplore, LookmlModelExploreField
 from .client import LookerClient
+from .manifest import ManifestSpec, load_manifest
+from .projection import ExtractionContext, project_field
 from .schema import FieldRecord
 
 logger = logging.getLogger(__name__)
 
 
-def flatten_field(
-    field: dict[str, Any],
-    *,
+def flatten_explore(
+    explore: dict[str, Any],
     model_name: str,
-    explore_name: str,
-    project_name: str,
-    explore_meta: dict[str, Any],
-) -> FieldRecord:
-    """Transform a single API field dict into a FieldRecord.
-
-    Args:
-        field: Raw field dict from API response (dimension, measure, filter, or parameter)
-        model_name: The LookML model name
-        explore_name: The explore name
-        project_name: The project name
-        explore_meta: Explore-level metadata (label, description, connection, etc)
-    """
-    # Phase 4 tripwire (TASK-007): validate API shape at boundary. Raises
-    # pydantic.ValidationError on drift. _typed_field is intentionally unused
-    # in this phase — the value gets consumed when Phase 6 swaps this body for
-    # projection.project_field(typed_field, manifest, context).
-    _typed_field = LookmlModelExploreField.model_validate(field)
-    return FieldRecord(
-        project_name=project_name,
-        model_name=model_name,
-        explore_name=explore_name,
-        field_name=field.get("name", ""),
-        category=field.get("category", ""),
-        field_type=field.get("type", ""),
-        is_numeric=field.get("is_numeric", False),
-        is_timeframe=field.get("is_timeframe", False),
-        is_fiscal=field.get("is_fiscal", False),
-        is_filter=field.get("is_filter", False),
-        dynamic=field.get("dynamic", False),
-        label=field.get("label", ""),
-        label_short=field.get("label_short", ""),
-        description=field.get("description", ""),
-        view_name=field.get("view", ""),
-        view_label=field.get("view_label", ""),
-        original_view=field.get("original_view", ""),
-        group_label=field.get("field_group_label") or "",
-        hidden=field.get("hidden", False),
-        sql=field.get("sql"),
-        source_file=field.get("source_file", ""),
-        source_file_path=field.get("source_file_path", ""),
-        dimension_group=field.get("dimension_group"),
-        scope=field.get("scope", ""),
-        primary_key=field.get("primary_key", False),
-        value_format=field.get("value_format"),
-        value_format_name=field.get("value_format_name"),
-        sortable=field.get("sortable", True),
-        can_filter=field.get("can_filter", True),
-        suggest_dimension=field.get("suggest_dimension", ""),
-        suggest_explore=field.get("suggest_explore", ""),
-        tags=field.get("tags", []),
-        times_used=field.get("times_used", 0),
-        explore_label=explore_meta.get("label", ""),
-        explore_description=explore_meta.get("description"),
-        explore_group_label=explore_meta.get("group_label"),
-        explore_hidden=explore_meta.get("hidden", False),
-        explore_connection=explore_meta.get("connection_name", ""),
-        explore_view_name=explore_meta.get("view_name", ""),
-    )
-
-
-def flatten_explore(explore: dict[str, Any], model_name: str) -> list[FieldRecord]:
+    manifest: ManifestSpec | None = None,
+) -> list[FieldRecord]:
     """Flatten all fields from a single explore response into FieldRecords.
 
-    Processes dimensions, measures, filters, and parameters from the
-    explore's 'fields' object.
-    """
-    records: list[FieldRecord] = []
-    project_name = explore.get("project_name", "")
-    explore_name = explore.get("name", "")
-    explore_meta = {
-        "label": explore.get("label", ""),
-        "description": explore.get("description"),
-        "group_label": explore.get("group_label"),
-        "hidden": explore.get("hidden", False),
-        "connection_name": explore.get("connection_name", ""),
-        "view_name": explore.get("view_name", ""),
-    }
+    Validates the explore + each field through the typed pydantic classes
+    (input tripwire -- raises ValidationError on API drift). Projects
+    each typed field into a FieldRecord via the manifest.
 
+    Args:
+        explore: Raw explore dict from LookerClient.lookml_model_explore.
+        model_name: Model name (extraction-loop ground truth -- the
+            duplication-bug fix; ``explore.model_name`` from the API is
+            unreliable per swagger nullability).
+        manifest: Optional pre-loaded ManifestSpec. Falls back to bundled
+            default load when None -- keeps callers like ``verify.py``
+            single-shot-friendly without threading manifest through every
+            layer.
+    """
+    if manifest is None:
+        manifest = ManifestSpec.model_validate(load_manifest())
+
+    typed_explore = LookmlModelExplore.model_validate(explore)
+    context = ExtractionContext(model_name=model_name)
+
+    records: list[FieldRecord] = []
     fields_obj = explore.get("fields", {}) or {}
-    for field_type in ("dimensions", "measures", "filters", "parameters"):
-        for field in fields_obj.get(field_type, []):
+    for field_kind in ("dimensions", "measures", "filters", "parameters"):
+        for raw_field in fields_obj.get(field_kind, []):
+            typed_field = LookmlModelExploreField.model_validate(raw_field)
             records.append(
-                flatten_field(
-                    field,
-                    model_name=model_name,
-                    explore_name=explore_name,
-                    project_name=project_name,
-                    explore_meta=explore_meta,
-                )
+                project_field(typed_field, typed_explore, context, manifest)
             )
 
     return records
@@ -118,17 +67,25 @@ async def extract_all(
     *,
     model_filter: str | None = None,
     explore_filter: str | None = None,
+    manifest: ManifestSpec | None = None,
 ) -> AsyncIterator[FieldRecord]:
     """Extract all fields from all models/explores, yielding FieldRecords.
 
+    Loads the manifest once at entry, then threads the typed spec down
+    so each per-explore flatten skips re-load + re-validation.
+
     Args:
-        client: Authenticated LookerClient
-        model_filter: Optional model name filter
-        explore_filter: Optional explore name filter
+        client: Authenticated LookerClient.
+        model_filter: Optional model name filter.
+        explore_filter: Optional explore name filter.
+        manifest: Optional pre-loaded ManifestSpec (default: bundled load).
 
     Yields:
-        FieldRecord for each field in each explore
+        FieldRecord for each field in each explore.
     """
+    if manifest is None:
+        manifest = ManifestSpec.model_validate(load_manifest())
+
     models = await client.all_lookml_models()
 
     pairs: list[tuple[str, str]] = []
@@ -147,7 +104,7 @@ async def extract_all(
     async def _fetch_one(model_name: str, explore_name: str) -> list[FieldRecord]:
         try:
             explore = await client.lookml_model_explore(model_name, explore_name)
-            return flatten_explore(explore, model_name)
+            return flatten_explore(explore, model_name, manifest)
         except Exception as exc:
             logger.error("Failed to extract %s::%s: %s", model_name, explore_name, exc)
             return []
@@ -168,13 +125,14 @@ def enrich_seen_in(records: list[FieldRecord]) -> list[FieldRecord]:
     - Total times_used across all appearances
     - List of models and model::explore pairs
 
-    This answers: "Where is this field visible across the instance?"
-    A field defined in users.view.lkml might be seen in 5 different explores
+    Answers: "Where is this field visible across the instance?" A field
+    defined in users.view.lkml might be seen in 5 different explores
     across 3 models because those explores all join the users view.
-    """
-    from typing import Any
 
-    # Phase 1: Aggregate by field_name
+    Mutates records in place via setattr on declared FieldRecord fields
+    (the seen-in family). ``extra="forbid"`` only blocks undeclared
+    attributes; reassigning declared fields is allowed.
+    """
     agg: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"models": set(), "explores": set(), "total_usage": 0}
     )
@@ -185,7 +143,6 @@ def enrich_seen_in(records: list[FieldRecord]) -> list[FieldRecord]:
         bucket["explores"].add(f"{r.model_name}::{r.explore_name}")
         bucket["total_usage"] += r.times_used
 
-    # Phase 2: Stamp back onto each record
     for r in records:
         bucket = agg[r.field_name]
         r.seen_in_model_count = len(bucket["models"])
@@ -195,7 +152,7 @@ def enrich_seen_in(records: list[FieldRecord]) -> list[FieldRecord]:
         r.seen_explores = sorted(bucket["explores"])
 
     logger.info(
-        "Enriched %d records — %d unique field definitions",
+        "Enriched %d records -- %d unique field definitions",
         len(records),
         len(agg),
     )

@@ -27,6 +27,11 @@ from .loader import (
     user_config_path,
     write_user_config,
 )
+from .drift import (
+    KNOWN_API_EXTRAS,
+    suggest_manifest_additions,
+    validate_manifest_drift,
+)
 from .schema import (
     ColumnSpec,
     DerivedColumnSpec,
@@ -36,11 +41,14 @@ from .schema import (
 __all__ = [
     "ColumnSpec",
     "DerivedColumnSpec",
+    "KNOWN_API_EXTRAS",
     "ManifestSource",
     "ManifestSourceKind",
     "ManifestSpec",
     "load_manifest",
     "resolve_manifest_source",
+    "suggest_manifest_additions",
     "user_config_path",
+    "validate_manifest_drift",
     "write_user_config",
 ]

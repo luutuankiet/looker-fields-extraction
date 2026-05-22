@@ -1,22 +1,76 @@
 # looker-fields
 
-Extract field-level metadata from any Looker instance via the API.
+> **The compiled truth about every field in your Looker instance** — with an output schema you own.
 
-Produces an accurate, de-duplicated inventory of every field (dimensions, measures, dimension_groups, filters, parameters) across all models, explores, and views — with **correct model attribution**.
+Hand-rolling Looker metadata pipelines is a tax. Parsing raw `.lkml` files lies (`include:` resolution, refinements, view aliasing). The official SDK gives you raw API JSON, not analysis-ready rows. And every team rewrites the same field flattener — missing the same edge cases, hitting the same duplication bug.
 
-## Why
+`looker-fields` extracts every field — dimensions, measures, dimension groups, filters, parameters — across every model and explore, with **correct model attribution** and **cross-explore visibility**. The output schema is yours: it's a YAML manifest you can edit, override, regenerate.
 
-Parsing raw `.lkml` files cannot resolve `include` statements, leading to model misattribution and Cartesian duplication. This tool extracts the **compiled truth** directly from the Looker API — the final state after Looker's engine has resolved all includes, extensions, and refinements.
+```bash
+pip install looker-fields
+looker-fields extract -o all_fields.jsonl     # 12K+ fields in seconds, zero dupes
+```
+
+## What you get
+
+One row per `(project, model, explore, field)` with 46 columns covering:
+
+- **Identity** — fully-qualified name, view, original view (after `from:` aliasing), source LookML file
+- **Classification** — category (dimension/measure/filter/parameter), type, is_numeric, is_timeframe, primary_key
+- **Display** — label, label_short, group_label, hidden, value_format, value_format_name
+- **LookML source** — sql expression (if you have `see_lookml`), source_file_path, scope
+- **Quality signals** — `times_used` (dead-field detection), `total_times_used`, tags
+- **Cross-explore visibility** — `seen_in_model_count`, `seen_in_explore_count`, `seen_models[]`, `seen_explores[]` — answers "where is this field actually used?"
+- **Explore context** — explore label, description, connection, base view
+- **Provenance** — extracted_at timestamp, schema_version
+
+Sample row (JSONL):
+
+```json
+{"project_name":"thelook","model_name":"thelook","explore_name":"order_items","field_name":"users.email","category":"dimension","field_type":"string","label":"Users Email","view_name":"users","original_view":"users","sql":"${TABLE}.email","source_file_path":"thelook/views/users.view.lkml","primary_key":false,"sortable":true,"can_filter":true,"times_used":1234,"seen_in_explore_count":7,"seen_models":["thelook"],"seen_explores":["thelook::events","thelook::order_items","thelook::orders","thelook::sessions","thelook::users"]}
+```
+
+## Use cases
+
+| You want to... | Use the column(s)... |
+|---|---|
+| Find dead fields nobody uses | `times_used = 0` |
+| Map field lineage across explores | `seen_explores[]` |
+| Audit which fields expose PII | `tags`, `description`, regex on `sql` |
+| Feed a data catalog / metric registry | join on `(model, explore, field_name)` |
+| Detect when a LookML refactor changed something | diff JSONL snapshots across runs |
+| Track Looker API drift after an upgrade | `looker-fields refresh-schema` |
+| Build a BI cost model | aggregate `total_times_used` by `view_name` |
+| Push fresh metadata to BigQuery for governance | `looker-fields extract --format bq ...` |
+
+## Why this is different
+
+| Approach | Resolves `include:` | Correct model attribution | Cross-explore visibility | Schema you own |
+|---|---|---|---|---|
+| Parse raw `.lkml` files | ❌ | ❌ | ❌ | manual |
+| Drive the official `looker_sdk` directly | ✅ | ⚠️ (default) | ❌ | none — raw API |
+| Build your own flattener | ✅ | ⚠️ (easy to mess up) | ❌ | yours, but you wrote it |
+| `looker-fields` | ✅ | ✅ (by construction) | ✅ | YAML manifest, codegen'd |
+
+**The duplication bug** that breaks naive pipelines: an explore can be defined in `model_A` AND surfaced in `model_B` via `include:`. Naive code keys by `(project, explore, field)` and Cartesian-explodes. `looker-fields` keys by `(project, model, explore, field)` — where model is **always** the extraction loop's iteration variable, never the API response's nullable `explore.model_name`. Duplication is impossible by construction.
 
 ## Install
 
 ```bash
+pip install looker-fields
+```
+
+Or for development:
+
+```bash
+git clone https://github.com/luutuankiet/looker-fields-extraction.git
+cd looker-fields-extraction
 pip install -e ".[dev]"
 ```
 
 ## Setup
 
-Create a `.env` file:
+Create `.env`:
 
 ```env
 LOOKER_BASE_URL=https://your-instance.cloud.looker.com
@@ -24,46 +78,145 @@ LOOKER_CLIENT_ID=your_client_id
 LOOKER_CLIENT_SECRET=your_client_secret
 ```
 
-## Usage
+API credentials: Looker → Admin → Users → your user → "Edit Keys" → "New API3 Key".
+
+## Quickstart
 
 ```bash
-# Extract all fields (JSONL output)
-looker-fields extract
-
-# Extract as CSV
-looker-fields extract --format csv --output fields.csv
-
-# Extract specific model
-looker-fields extract --model my_model
-
-# Verify extraction against live API
-looker-fields verify my_model my_explore
-
-# Show instance info
+# Show what your instance has
 looker-fields info
+
+# Extract everything (JSONL is the default; -o is short for --output)
+looker-fields extract -o all_fields.jsonl
+
+# Single model / explore
+looker-fields extract --model my_model --explore my_explore -o slice.jsonl
+
+# Round-trip verify a specific explore (re-fetches, diffs, exits 0/1)
+looker-fields verify my_model my_explore -o all_fields.jsonl
+
+# Push to BigQuery
+looker-fields extract --format bq -o my_project.my_dataset.fields
+
+# Dump one explore's raw API JSON for offline debugging
+looker-fields dump my_model my_explore -o raw.json
 ```
 
-## Output
+## The manifest is your contract
 
-Each row represents one field with grain `(project, model, explore, field_name)`.
+Most metadata tools force you to live with their output schema. This one inverts that: the output is defined by `src/looker_fields/manifest/fields.yaml`, which ships as a bundled default but you can override entirely.
 
-Supported formats: JSONL (default), CSV, Parquet, BigQuery.
+```yaml
+# manifest/fields.yaml (excerpt)
+columns:
+  - name: model_name
+    type: str
+    api_source: context.model_name   # extraction-loop ground truth (never null)
+    default: ''
+    description: Always from explore context — the fix for duplication
 
-See [`docs/FIELD_SPEC.md`](docs/FIELD_SPEC.md) for the full output schema.
+  - name: times_used
+    type: int
+    api_source: field.times_used
+    default: 0
+    description: Count of query usage. Valuable for identifying dead fields
+```
+
+Want to add a column? Edit the YAML.
+
+```bash
+# Use a custom manifest for one invocation
+looker-fields extract --manifest-path ./my_manifest.yaml
+
+# Or install it permanently to XDG config
+cp my_manifest.yaml ~/.config/looker-fields/manifest.yaml
+
+# Or set per-invocation via env
+LOOKER_FIELDS_MANIFEST=./my_manifest.yaml looker-fields extract
+
+# Regenerate the typed FieldRecord pydantic class to match your manifest
+looker-fields regen-types
+
+# Next invocation dynamic-imports your custom contract from
+# ~/.cache/looker-fields/_fieldrecord/types.py
+# (revert: rm that file)
+```
+
+4-step resolution chain (CLI flag > env var > XDG > bundled). Whichever you set wins predictably.
+
+## Drift detection at both ends
+
+When Looker upgrades and the API changes:
+
+```bash
+# Fetch fresh swagger, run TWO drift detectors:
+#   v1 — does the swagger still carry every path the extractor depends on?
+#   v2 — does every manifest api_source still resolve against the live swagger?
+looker-fields refresh-schema
+```
+
+When you want to know if there are new API attributes you could add to your manifest:
+
+```bash
+# Surfaces additions: swagger attrs the manifest doesn't reference yet.
+looker-fields refresh-manifest
+```
+
+Both commands surface signal. Neither auto-writes — you decide.
+
+## Output formats
+
+| Format | Flag | Use case |
+|---|---|---|
+| JSONL | `--format jsonl` (default) | Streaming, DuckDB, jq |
+| CSV | `--format csv` | Spreadsheet, diff, manual review |
+| Parquet | `--format parquet` | Columnar analytics, large instances |
+| BigQuery | `--format bq` | Production governance pipelines |
+
+Adding a new sink = one writer class subclassing `output.Writer`.
 
 ## Architecture
 
+Three-layer codegen surface:
+
 ```
-src/looker_fields/
-├── cli.py       # typer CLI
-├── config.py    # .env + Settings
-├── client.py    # Async httpx client
-├── schema.py    # Output models + Swagger discovery
-├── extract.py   # Core extraction logic
-└── output.py    # Multi-sink writers
+swagger.json (Looker owns) ---> _swagger/types.py (input parsers, extra="allow")
+manifest/fields.yaml (you own) ---> _fieldrecord/types.py (output records, extra="forbid")
+                              ---> projection.project_field (runtime mapper)
 ```
 
-See [`gsd-lite/ARCHITECTURE.md`](gsd-lite/ARCHITECTURE.md) for design decisions.
+The three-`extra`-policy invariant:
+
+| Layer | Module | Pydantic policy | Why |
+|---|---|---|---|
+| **Input** | `_swagger/types.py` | `extra="allow"` | forward-compat with Looker API additions |
+| **Config** | `manifest/schema.py` | `extra="allow"` | forward-compat with new manifest sections |
+| **Output** | `_fieldrecord/types.py` | `extra="forbid"` | strict contract for downstream consumers |
+
+Client overrides flow through XDG cache + dynamic import: edit YAML, run `regen-types`, next program startup loads your contract instead of the bundled one. No site-packages write needed.
+
+## Roadmap
+
+This is **Fields v1** of a multi-entity framework. Same manifest-native pattern will land for:
+
+- **Models** (v2) — model-level metadata + project lineage
+- **Explores** (v3) — explore graphs + join semantics
+- **Looks / Dashboards** (v4-v5) — saved-query metadata + dashboard composition
+
+## Contributing
+
+```bash
+# Run the full suite (36 tests)
+pytest tests/ -v
+
+# Regenerate the bundled manifest after editing docs/FIELD_SPEC.md
+python scripts/parse_field_spec_to_manifest.py
+
+# Regenerate the bundled FieldRecord after editing the manifest
+python scripts/regen_fieldrecord.py
+```
+
+PRs welcome. The codebase is intentionally small (~2K LOC) and aggressively unit-tested. Adding a column = YAML edit + one regen + commit; adding a sink = one writer class.
 
 ## License
 
