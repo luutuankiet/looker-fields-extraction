@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "looker-fields"
+name = "looker-fields-extraction"
 version = "0.1.0"
 description = "Extract field-level metadata from any Looker instance via the API"
 readme = "README.md"
@@ -22,6 +22,7 @@ dependencies = [
     "google-cloud-bigquery>=3.20",
     "looker-sdk>=24.0",
     "python-dotenv>=1.0",
+    "platformdirs>=4.0",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +30,7 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.4",
+    "datamodel-code-generator>=0.25",
 ]
 
 [project.scripts]

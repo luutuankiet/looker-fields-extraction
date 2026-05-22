@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     output_format: str = Field("jsonl", description="Default output format")
     output_path: str = Field("output.jsonl", description="Default output path")
 
+    # Schema cache override (loader resolution: CLI flag > this env > XDG > bundled)
+    swagger_path: Optional[Path] = Field(
+        None,
+        description="Override path to swagger.json (env: LOOKER_SWAGGER_PATH)",
+    )
+
     # BigQuery (optional)
     bq_project: Optional[str] = Field(None, description="BigQuery project ID")
     bq_dataset: Optional[str] = Field(None, description="BigQuery dataset name")

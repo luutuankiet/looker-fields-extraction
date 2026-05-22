@@ -72,15 +72,121 @@ def verify(
         "output.jsonl", "--output", "-o", help="Extraction output to verify against"
     ),
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
-    """Verify extracted fields against live API for a specific explore."""
-    # TODO: Implement verification
-    # 1. Load extracted fields for model::explore from output file
-    # 2. Call API for same model::explore
-    # 3. Diff field-by-field
-    # 4. Report mismatches
+    """Verify extracted fields against live API for a specific explore.
+
+    Re-fetches the explore from the API, re-runs the extractor's flatten_explore
+    over the fresh response, and diffs the result against ``--output``. Exit 0
+    if the diff is clean, exit 1 otherwise.
+    """
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    from .config import load_settings
+    from .client import LookerClient
+    from .verify import diff_extracted_vs_raw, load_extracted_records
+
+    if not output.exists():
+        typer.echo(f"error: extraction output not found: {output}", err=True)
+        raise typer.Exit(2)
+
+    settings = load_settings(env_file)
     typer.echo(f"Verifying {model}::{explore} against {output}")
-    raise NotImplementedError("Verification not yet implemented")
+
+    async def _run() -> int:
+        extracted = load_extracted_records(output, model, explore)
+        if not extracted:
+            typer.echo(
+                f"error: no records found in {output} for {model}::{explore}",
+                err=True,
+            )
+            return 2
+        async with LookerClient(settings) as client:
+            raw = await client.lookml_model_explore(model, explore)
+        report = diff_extracted_vs_raw(extracted, raw, model)
+        typer.echo(report.render())
+        return 0 if report.is_clean else 1
+
+    raise typer.Exit(asyncio.run(_run()))
+
+
+@app.command()
+def dump(
+    model: str = typer.Argument(..., help="Model name to dump"),
+    explore: str = typer.Argument(..., help="Explore name to dump"),
+    output: Path = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output JSON file (default: dump_<model>_<explore>.json)",
+    ),
+    env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
+) -> None:
+    """Dump the raw API response for one explore to a local JSON file.
+
+    Useful for offline development, debugging extractor behavior, and feeding
+    the verifier in air-gapped CI.
+    """
+    import json
+
+    from .config import load_settings
+    from .client import LookerClient
+
+    settings = load_settings(env_file)
+    target = output or Path(f"dump_{model}_{explore}.json")
+
+    async def _run() -> None:
+        async with LookerClient(settings) as client:
+            raw = await client.lookml_model_explore(model, explore)
+        target.write_text(json.dumps(raw, indent=2, sort_keys=True))
+        typer.echo(f"Wrote {target} ({target.stat().st_size // 1024} KB)")
+
+    asyncio.run(_run())
+
+
+@app.command("refresh-schema")
+def refresh_schema(
+    output: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Target path for the fresh swagger.json (default: XDG user config)",
+    ),
+    env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
+) -> None:
+    """Fetch live swagger.json from the configured Looker instance and persist it.
+
+    Default target is the XDG user config path. Once written, the loader's
+    XDG step picks it up automatically on the next run (precedence chain:
+    CLI flag > LOOKER_SWAGGER_PATH env > XDG > bundled baseline).
+
+    After writing, runs ``validate_schema_drift`` against the new spec and
+    prints any drift warnings.
+    """
+    from .config import load_settings
+    from .client import LookerClient
+    from ._swagger import user_config_path, write_user_config
+    from .schema import validate_schema_drift
+
+    settings = load_settings(env_file)
+    target = output or user_config_path()
+
+    async def _run() -> None:
+        async with LookerClient(settings) as client:
+            spec = await client.get_swagger()
+        written = write_user_config(spec, target)
+        typer.echo(f"Wrote {written} ({written.stat().st_size // 1024} KB)")
+        warnings = validate_schema_drift(spec)
+        if warnings:
+            typer.echo(f"\n{len(warnings)} drift warning(s) vs extractor's required-paths contract:")
+            for w in warnings:
+                typer.echo(f"  WARN: {w}")
+        else:
+            typer.echo("No drift warnings.")
+
+    asyncio.run(_run())
 
 
 @app.command()
