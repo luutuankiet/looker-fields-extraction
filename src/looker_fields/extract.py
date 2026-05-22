@@ -7,6 +7,7 @@ import logging
 from collections import defaultdict
 from typing import Any, AsyncIterator
 
+from ._swagger.types import LookmlModelExploreField
 from .client import LookerClient
 from .schema import FieldRecord
 
@@ -30,6 +31,11 @@ def flatten_field(
         project_name: The project name
         explore_meta: Explore-level metadata (label, description, connection, etc)
     """
+    # Phase 4 tripwire (TASK-007): validate API shape at boundary. Raises
+    # pydantic.ValidationError on drift. _typed_field is intentionally unused
+    # in this phase — the value gets consumed when Phase 6 swaps this body for
+    # projection.project_field(typed_field, manifest, context).
+    _typed_field = LookmlModelExploreField.model_validate(field)
     return FieldRecord(
         project_name=project_name,
         model_name=model_name,

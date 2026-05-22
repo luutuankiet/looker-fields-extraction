@@ -1,100 +1,32 @@
-"""Swagger discovery and Pydantic output models."""
+"""Swagger discovery + FieldRecord re-export.
+
+FieldRecord lives in ``_fieldrecord/types.py`` (generated from
+``manifest/fields.yaml``). It is re-exported here so existing
+``from .schema import FieldRecord`` imports across the codebase remain stable
+(see cli.py, output.py, extract.py, verify.py).
+
+The Swagger drift detector (SwaggerFieldMapping + REQUIRED_* +
+parse_swagger_explore_schema + validate_schema_drift) remains in this module:
+the manifest IS the *output* contract; the swagger machinery guards the
+*input* contract (what the Looker API ships).
+"""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
-import orjson
 from pydantic import BaseModel, Field
 
+from ._fieldrecord.types import FieldRecord
 
-# ---------------------------------------------------------------------------
-# Output schema - the contract for extracted field data
-# Grain: (project_name, model_name, explore_name, field_name) = unique row
-# See docs/FIELD_SPEC.md for full mapping rationale
-# ---------------------------------------------------------------------------
-
-
-class FieldRecord(BaseModel):
-    """One extracted field - the fundamental output row."""
-
-    # === Identity (the unique grain) ===
-    project_name: str = Field(..., description="LookML project name")
-    model_name: str = Field(..., description="LookML model name")
-    explore_name: str = Field(..., description="Explore name")
-    field_name: str = Field(..., description="Fully-qualified field name (view.field)")
-
-    # === Classification ===
-    category: str = Field(..., description="dimension, measure, filter, or parameter")
-    field_type: str = Field(..., description="LookML type (string, number, count, date_date, etc)")
-    is_numeric: bool = Field(False)
-    is_timeframe: bool = Field(False)
-    is_fiscal: bool = Field(False)
-    is_filter: bool = Field(False)
-    dynamic: bool = Field(False, description="True if from dynamic_fields, not the model")
-
-    # === Display ===
-    label: str = Field("", description="Fully-qualified human-readable label")
-    label_short: str = Field("", description="Label without view prefix")
-    description: str = Field("")
-    view_name: str = Field("", description="View this field belongs to")
-    view_label: str = Field("")
-    original_view: str = Field("", description="Where actually defined (differs with from:)")
-    group_label: str = Field("", description="Field group label for UI grouping")
-    hidden: bool = Field(False)
-
-    # === LookML source ===
-    sql: Optional[str] = Field(None, description="SQL expression (requires see_lookml perm)")
-    source_file: str = Field("")
-    source_file_path: str = Field("")
-    dimension_group: Optional[str] = Field(None, description="Dimension group name if member")
-    scope: str = Field("")
-    primary_key: bool = Field(False)
-
-    # === Formatting ===
-    value_format: Optional[str] = Field(None)
-    value_format_name: Optional[str] = Field(None)
-    sortable: bool = Field(True)
-    can_filter: bool = Field(True)
-
-    # === Suggestions ===
-    suggest_dimension: str = Field("")
-    suggest_explore: str = Field("")
-    tags: list[str] = Field(default_factory=list)
-
-    # === Usage ===
-    times_used: int = Field(0)
-
-    # === Seen-in enrichment (computed post-extraction) ===
-    # Groups by field_name across all models/explores to answer:
-    # "Where is this field visible across the instance?"
-    seen_in_model_count: int = Field(0, description="Distinct models this field appears in")
-    seen_in_explore_count: int = Field(0, description="Distinct explores this field appears in")
-    total_times_used: int = Field(0, description="Sum of times_used across all appearances")
-    seen_models: list[str] = Field(default_factory=list, description="Model names where visible")
-    seen_explores: list[str] = Field(
-        default_factory=list, description="model::explore pairs where visible"
-    )
-
-    # === Explore context (denormalized for flat output) ===
-    explore_label: str = Field("")
-    explore_description: Optional[str] = Field(None)
-    explore_group_label: Optional[str] = Field(None)
-    explore_hidden: bool = Field(False)
-    explore_connection: str = Field("")
-    explore_view_name: str = Field("", description="Base view of the explore")
-
-    # === Extraction metadata ===
-    extracted_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
-        description="ISO timestamp of extraction",
-    )
-    schema_version: str = Field("1.1.0", description="Output schema version")
-
-    def to_jsonl(self) -> bytes:
-        """Serialize to a JSONL-ready bytes line."""
-        return orjson.dumps(self.model_dump(), option=orjson.OPT_APPEND_NEWLINE)
+__all__ = [
+    "FieldRecord",
+    "SwaggerFieldMapping",
+    "REQUIRED_FIELD_PROPERTIES",
+    "REQUIRED_EXPLORE_PROPERTIES",
+    "parse_swagger_explore_schema",
+    "validate_schema_drift",
+]
 
 
 # ---------------------------------------------------------------------------

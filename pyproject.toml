@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "looker-fields-extraction"
-version = "0.1.0"
+name = "looker-fields"
+version = "0.1.1"
 description = "Extract field-level metadata from any Looker instance via the API"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -23,6 +23,7 @@ dependencies = [
     "looker-sdk>=24.0",
     "python-dotenv>=1.0",
     "platformdirs>=4.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +36,7 @@ dev = [
 
 [project.scripts]
 looker-fields = "looker_fields.cli:app"
+lf = "looker_fields.cli:app"  # short alias
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/looker_fields"]
