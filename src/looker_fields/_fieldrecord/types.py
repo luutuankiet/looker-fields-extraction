@@ -72,6 +72,9 @@ class FieldRecord(BaseModel):
     total_times_used: int = Field(0, description='Aggregate usage across all appearances')
     seen_models: list[str] = Field(default_factory=list, description='JSON array of model names')
     seen_explores: list[str] = Field(default_factory=list, description='JSON array of "model::explore" strings')
+    definition_hash: str = Field('', description='Content fingerprint per row. Identical hashes = identical definition. Empty string for `dynamic=true` fields (query-scoped, no stable identity).')
+    definition_variant_count: int = Field(0, description='`1` = uniformly defined everywhere; `>1` = refinement-driven drift to investigate.')
+    definition_appearances_count: int = Field(0, description='Cross-alias lineage count — merges across `from:` join aliases that `seen_in_*` (field_name-keyed) keeps separate.')
 
     def to_jsonl(self) -> bytes:
         """Serialize to a JSONL-ready bytes line."""

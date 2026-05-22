@@ -13,7 +13,7 @@ looker-fields extract -o all_fields.jsonl     # 12K+ fields in seconds, zero dup
 
 ## What you get
 
-One row per `(project, model, explore, field)` with 46 columns covering:
+One row per `(project, model, explore, field)` with 49 columns covering:
 
 - **Identity** — fully-qualified name, view, original view (after `from:` aliasing), source LookML file
 - **Classification** — category (dimension/measure/filter/parameter), type, is_numeric, is_timeframe, primary_key
@@ -39,6 +39,8 @@ Sample row (JSONL):
 | Audit which fields expose PII | `tags`, `description`, regex on `sql` |
 | Feed a data catalog / metric registry | join on `(model, explore, field_name)` |
 | Detect when a LookML refactor changed something | diff JSONL snapshots across runs |
+| Audit silent refinement drift across the instance (v0.2.1+) | `definition_variant_count > 1` |
+| Trace a field across `from:` join aliases (v0.2.1+) | group by `(original_view, leaf_name)` or use `definition_appearances_count` |
 | Track Looker API drift after an upgrade | `looker-fields refresh-schema` |
 | Build a BI cost model | aggregate `total_times_used` by `view_name` |
 | Push fresh metadata to BigQuery for governance | `looker-fields extract --format bq ...` |
@@ -53,6 +55,36 @@ Sample row (JSONL):
 | `looker-fields` | ✅ | ✅ (by construction) | ✅ | YAML manifest, codegen'd |
 
 **The duplication bug** that breaks naive pipelines: an explore can be defined in `model_A` AND surfaced in `model_B` via `include:`. Naive code keys by `(project, explore, field)` and Cartesian-explodes. `looker-fields` keys by `(project, model, explore, field)` — where model is **always** the extraction loop's iteration variable, never the API response's nullable `explore.model_name`. Duplication is impossible by construction.
+
+## Field Identity Semantics (v0.2.1+)
+
+Three distinct identity flavors. Conflating them silently misleads on heavily-refined LookML.
+
+| Identity flavor | Tuple | Answers | Column(s) |
+|---|---|---|---|
+| **Appearance** | `(project, model, explore, field_name)` | "Where is this field visible in the catalog?" | row grain — 1 row per tuple, never collapsed |
+| **Definition** | `(original_view, leaf_name)` + content hash | "What LookML source produced this field?" | `definition_hash`, `definition_variant_count`, `definition_appearances_count` |
+| **Logical** | `field_name` alone | "Is this 'the same field' across the instance?" | `seen_in_model_count`, `seen_in_explore_count`, `seen_models[]`, `seen_explores[]` |
+
+The v0.2.0 row grain was correct — every appearance is preserved 1:1, no rows dropped. But the `seen_in_*` summary columns are keyed by `field_name` alone. When a refinement in `model_B` adds a `pii` tag or replaces the SQL on `users.email`, both `model_A.users.email` and `model_B.users.email` rows stamp `seen_in_explore_count=2` — implying uniform definition. **That was the silent drift.** v0.2.1 makes it queryable.
+
+### One-query drift audit
+
+```sql
+SELECT field_name,
+       seen_in_explore_count,        -- old logical answer
+       definition_variant_count,     -- new content-drift answer
+       definition_appearances_count  -- new cross-alias lineage answer
+FROM read_json_auto('extract.jsonl')
+WHERE definition_variant_count > 1
+ORDER BY definition_variant_count DESC, seen_in_explore_count DESC;
+```
+
+Empirical baseline on one real 12,731-field instance: **9.6% of rows** had `definition_variant_count > 1` (silent refinement drift); **40.2%** had `definition_appearances_count > 1` (cross-alias semantics `seen_in_*` couldn't surface).
+
+### What we can't tell you (honest limits)
+
+The Looker API does not expose `extends_chain`, `included_via`, or any refinement-chain attribution — only the *composed result*. So `definition_hash` will split rows whose semantic content actually differs, but cannot tell you *which* refinement or include caused the divergence. For that, parse the LookML repo directly.
 
 ## Install
 
@@ -206,7 +238,7 @@ This is **Fields v1** of a multi-entity framework. Same manifest-native pattern 
 ## Contributing
 
 ```bash
-# Run the full suite (36 tests)
+# Run the full suite (43 tests)
 pytest tests/ -v
 
 # Regenerate the bundled manifest after editing docs/FIELD_SPEC.md

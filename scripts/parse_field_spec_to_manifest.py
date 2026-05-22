@@ -157,7 +157,7 @@ def _derived_deterministic(expression: str) -> bool:
         return False
     if expr.lower() == "hardcoded":
         return True
-    if any(kw in expr for kw in ("Count distinct", "Sum of", "Distinct ")):
+    if any(kw in expr for kw in ("Count distinct", "Sum of", "Distinct ", "Hashed")):
         return True
     return False
 

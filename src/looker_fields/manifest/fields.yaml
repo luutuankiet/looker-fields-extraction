@@ -250,6 +250,25 @@ derived_columns:
   deterministic: true
   source_section: Seen-In Enrichment (Computed Post-Extraction)
   description: JSON array of "model::explore" strings
+- name: definition_hash
+  type: str
+  expression: 'Hashed: sha256 of `(original_view, leaf_name, normalized_sql, sorted(tags), dimension_group, primary_key, field_type)`'
+  deterministic: true
+  source_section: Definition Identity (Computed Post-Extraction)
+  description: Content fingerprint per row. Identical hashes = identical definition. Empty string for `dynamic=true` fields
+    (query-scoped, no stable identity).
+- name: definition_variant_count
+  type: int
+  expression: Count distinct `definition_hash` per `field_name`
+  deterministic: true
+  source_section: Definition Identity (Computed Post-Extraction)
+  description: '`1` = uniformly defined everywhere; `>1` = refinement-driven drift to investigate.'
+- name: definition_appearances_count
+  type: int
+  expression: Count distinct `model::explore` per `(original_view, leaf_name)`
+  deterministic: true
+  source_section: Definition Identity (Computed Post-Extraction)
+  description: Cross-alias lineage count — merges across `from:` join aliases that `seen_in_*` (field_name-keyed) keeps separate.
 exclusions:
 - align
 - drill_fields

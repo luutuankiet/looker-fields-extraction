@@ -19,7 +19,7 @@ from .schema import FieldRecord
 
 # Columns excluded from value diff:
 #   - extracted_at:           re-derived expected has fresh timestamp
-#   - seen_in_*, total_times_used, seen_models, seen_explores:
+#   - seen_in_*, total_times_used, seen_models, seen_explores, definition_*:
 #       computed POST-extraction by enrich_seen_in(); expected (single-explore)
 #       won't have them populated yet.
 NON_DETERMINISTIC_COLUMNS: frozenset[str] = frozenset({
@@ -29,6 +29,9 @@ NON_DETERMINISTIC_COLUMNS: frozenset[str] = frozenset({
     "total_times_used",
     "seen_models",
     "seen_explores",
+    "definition_hash",
+    "definition_variant_count",
+    "definition_appearances_count",
 })
 
 

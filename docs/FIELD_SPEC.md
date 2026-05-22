@@ -143,6 +143,39 @@ These columns are computed after all fields are extracted, by grouping on `field
 - 270 field definitions (3%) appear across multiple models
 - 8,755 field definitions (97%) are model-local
 
+### Definition Identity (Computed Post-Extraction)
+
+These columns are computed after all fields are extracted; they answer different questions than `seen_in_*`. Where `seen_in_*` is keyed by `field_name` alone (logical identity), `definition_*` is keyed by content + lineage to surface drift the logical key collapses.
+
+| Column | Type | Computed From | Notes |
+|--------|------|--------------|-------|
+| `definition_hash` | str | Hashed: sha256 of `(original_view, leaf_name, normalized_sql, sorted(tags), dimension_group, primary_key, field_type)` | Content fingerprint per row. Identical hashes = identical definition. Empty string for `dynamic=true` fields (query-scoped, no stable identity). |
+| `definition_variant_count` | int | Count distinct `definition_hash` per `field_name` | `1` = uniformly defined everywhere; `>1` = refinement-driven drift to investigate. |
+| `definition_appearances_count` | int | Count distinct `model::explore` per `(original_view, leaf_name)` | Cross-alias lineage count — merges across `from:` join aliases that `seen_in_*` (field_name-keyed) keeps separate. |
+
+**Why this matters:** The Looker API returns the COMPOSED field per `(model, explore)` (refinements applied per Looker docs); per-row `sql`/`tags`/`source_file_path` are preserved correctly, but `seen_in_*` keyed by `field_name` alone silently collapses semantically-different refinement variants into one count. The `definition_*` family makes that drift queryable in one DuckDB statement.
+
+**Real example from joonpartner.cloud.looker.com (12,731 records, 2026-05-22):**
+- 1,220 rows (9.6%) had `definition_variant_count > 1` — drift the old summary silently hid
+- 5,119 rows (40.2%) had `definition_appearances_count > 1` — cross-alias semantics `seen_in_*` couldn't surface
+- `users.email`: 14 appearances, 3 distinct definitions, 2 tag variants across 6 source files
+- `users.first_name`: 14 appearances, 3 definitions, **2 SQL variants** (refinement actually replaces sql)
+- `users.last_name` reachable via both `users` AND `kitten_users` original_views (cross-project view collision)
+
+**Limit (honest):** The Looker API does not expose `extends_chain`, `included_via`, or `parent_view`. `definition_hash` will split rows whose semantic content actually differs, but cannot attribute *which* refinement or include caused the divergence. For full lineage attribution, parse the LookML repo directly.
+
+**One-query drift audit:**
+
+```sql
+SELECT field_name,
+       seen_in_explore_count,        -- old logical answer
+       definition_variant_count,     -- new content-drift answer
+       definition_appearances_count  -- new cross-alias lineage answer
+FROM read_json_auto('extract.jsonl')
+WHERE definition_variant_count > 1
+ORDER BY definition_variant_count DESC, seen_in_explore_count DESC;
+```
+
 ---
 
 ## Evidence: Real API Responses
