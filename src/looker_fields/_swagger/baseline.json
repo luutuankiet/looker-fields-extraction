@@ -1,0 +1,1300 @@
+{
+  "components": {
+    "schemas": {
+      "Error": {
+        "properties": {
+          "documentation_url": {
+            "description": "Documentation link",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "message": {
+            "description": "Error details",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "required": [
+          "message",
+          "documentation_url"
+        ],
+        "x-looker-status": "stable"
+      },
+      "LookmlFieldLink": {
+        "properties": {
+          "icon_url": {
+            "description": "A URL containing an image file to display with a link.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "label": {
+            "description": "The name of the link as it would appear to users.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "url": {
+            "description": "URL the link will go to.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExplore": {
+        "properties": {
+          "access_filter_fields": {
+            "description": "(DEPRECATED) Array of access filter field names",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-deprecated": true,
+            "x-looker-nullable": true
+          },
+          "access_filters": {
+            "description": "Access filters",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreAccessFilter"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "aliases": {
+            "description": "Aliases",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreAlias"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "always_filter": {
+            "description": "Always filter",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreAlwaysFilter"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "always_join": {
+            "description": "An array of joins that will always be included in the SQL for this explore, even if the user has not selected a field from the joined view.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "can_develop": {
+            "description": "Can Develop LookML",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_explain": {
+            "description": "Can Explain",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_pivot_in_db": {
+            "description": "Can pivot in the DB",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_save": {
+            "description": "Can Save",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_see_lookml": {
+            "description": "Can See LookML",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_subtotal": {
+            "description": "Can use subtotals",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_total": {
+            "description": "Can Total",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "conditionally_filter": {
+            "description": "Conditionally filter",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreConditionallyFilter"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "connection_name": {
+            "description": "Connection name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "description": {
+            "description": "Description",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "errors": {
+            "description": "Errors",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreError"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "fields": {
+            "$ref": "#/components/schemas/LookmlModelExploreFieldset",
+            "description": "Fields",
+            "readOnly": true,
+            "x-looker-nullable": true
+          },
+          "files": {
+            "description": "List of model source files",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "group_label": {
+            "description": "Label used to group explores in the navigation menus",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "has_timezone_support": {
+            "description": "Has timezone support",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "hidden": {
+            "description": "Is hidden",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "id": {
+            "description": "Fully qualified explore name (model name plus explore name)",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "index_fields": {
+            "description": "Array of index fields",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "joins": {
+            "description": "Views joined into this explore",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreJoins"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "label": {
+            "description": "Label",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "lookml_link": {
+            "description": "A URL linking to the definition of this explore in the LookML IDE.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "model_name": {
+            "description": "Name of model",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "name": {
+            "description": "Explore name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "null_sort_treatment": {
+            "description": "How nulls are sorted, possible values are \"low\", \"high\", \"first\" and \"last\"",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "project_name": {
+            "description": "Name of project",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "scopes": {
+            "description": "Scopes",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "sets": {
+            "description": "Sets",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreSet"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "source_file": {
+            "description": "Primary source_file file",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "sql_table_name": {
+            "description": "A sql_table_name expression that defines what sql table the view/explore maps onto. Example: \"prod_orders2 AS orders\" in a view named orders.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "supported_measure_types": {
+            "description": "An array of items describing which custom measure types are supported for creating a custom measure 'based_on' each possible dimension type.",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreSupportedMeasureType"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": false
+          },
+          "supports_cost_estimate": {
+            "description": "Cost estimates supported",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "tags": {
+            "description": "An array of arbitrary string tags provided in the model for this explore.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "title": {
+            "description": "Explore title",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "view_name": {
+            "description": "Name of view",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreAccessFilter": {
+        "properties": {
+          "field": {
+            "description": "Field to be filtered",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "user_attribute": {
+            "description": "User attribute name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreAlias": {
+        "properties": {
+          "name": {
+            "description": "Name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "value": {
+            "description": "Value",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreAlwaysFilter": {
+        "properties": {
+          "name": {
+            "description": "Name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "value": {
+            "description": "Value",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreConditionallyFilter": {
+        "properties": {
+          "name": {
+            "description": "Name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "value": {
+            "description": "Value",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreError": {
+        "properties": {
+          "details": {
+            "description": "Details",
+            "format": "any",
+            "readOnly": true,
+            "type": "any",
+            "x-looker-nullable": true
+          },
+          "error_pos": {
+            "description": "Error source location",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "field_error": {
+            "description": "Is this a field error",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "message": {
+            "description": "Error Message",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreField": {
+        "properties": {
+          "align": {
+            "description": "The appropriate horizontal text alignment the values of this field should be displayed in. Valid values are: \"left\", \"right\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "left",
+              "right"
+            ]
+          },
+          "can_filter": {
+            "description": "Whether it's possible to filter on this field.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can_time_filter": {
+            "description": "Whether this field can be time filtered.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "category": {
+            "description": "Field category Valid values are: \"parameter\", \"filter\", \"measure\", \"dimension\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true,
+            "x-looker-values": [
+              "parameter",
+              "filter",
+              "measure",
+              "dimension"
+            ]
+          },
+          "default_filter_value": {
+            "description": "The default value that this field uses when filtering. Null if there is no default value.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "description": {
+            "description": "Description",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "dimension_group": {
+            "description": "Dimension group if this field is part of a dimension group. If not, this will be null.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "drill_fields": {
+            "description": "Drill fields declared for this field in LookML or default drills for certain types.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "dynamic": {
+            "description": "Whether this field was specified in \"dynamic_fields\" and is not part of the model.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "enumerations": {
+            "description": "An array enumerating all the possible values that this field can contain. When null, there is no limit to the set of possible values this field can contain.",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreFieldEnumeration"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "error": {
+            "description": "An error message indicating a problem with the definition of this field. If there are no errors, this will be null.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "field_group_label": {
+            "description": "A label creating a grouping of fields. All fields with this label should be presented together when displayed in a UI.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "field_group_variant": {
+            "description": "When presented in a field group via field_group_label, a shorter name of the field to be displayed in that context.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "fill_style": {
+            "description": "The style of dimension fill that is possible for this field. Null if no dimension fill is possible. Valid values are: \"enumeration\", \"range\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true,
+            "x-looker-values": [
+              "enumeration",
+              "range"
+            ]
+          },
+          "filters": {
+            "description": "Array of filter conditions defined for the measure in LookML.",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreFieldMeasureFilters"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "fiscal_month_offset": {
+            "description": "An offset (in months) from the calendar start month to the fiscal start month defined in the LookML model this field belongs to.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "integer",
+            "x-looker-nullable": false
+          },
+          "has_allowed_values": {
+            "description": "Whether this field has a set of allowed_values specified in LookML.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "has_drills_metadata": {
+            "description": "Whether this field has links or drill fields defined.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "hidden": {
+            "description": "Whether this field should be hidden from the user interface.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "is_filter": {
+            "description": "Whether this field is a filter.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "is_fiscal": {
+            "description": "Whether this field represents a fiscal time value.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "is_numeric": {
+            "description": "Whether this field is of a type that represents a numeric value.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "is_timeframe": {
+            "description": "Whether this field is of a type that represents a time value.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "label": {
+            "description": "Fully-qualified human-readable label of the field.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "label_from_parameter": {
+            "description": "The name of the parameter that will provide a parameterized label for this field, if available in the current context.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "label_short": {
+            "description": "The human-readable label of the field, without the view label.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "links": {
+            "description": "Links associated with this field.",
+            "items": {
+              "$ref": "#/components/schemas/LookmlFieldLink"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "lookml_link": {
+            "description": "A URL linking to the definition of this field in the LookML IDE.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "map_layer": {
+            "$ref": "#/components/schemas/LookmlModelExploreFieldMapLayer",
+            "description": "If applicable, a map layer this field is associated with.",
+            "readOnly": true,
+            "x-looker-nullable": true
+          },
+          "measure": {
+            "description": "Whether this field is a measure.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "name": {
+            "description": "Fully-qualified name of the field.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "original_view": {
+            "description": "The name of the view this field is defined in. This will be different than \"view\" when the view has been joined via a different name using the \"from\" parameter.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "parameter": {
+            "description": "Whether this field is a parameter.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "period_over_period_params": {
+            "$ref": "#/components/schemas/LookmlModelExploreFieldPeriodOverPeriodParams",
+            "description": "For measures of type period_over_period, this will return the individual metadata parameters.",
+            "readOnly": true,
+            "x-looker-nullable": true
+          },
+          "permanent": {
+            "description": "Whether this field can be removed from a query.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": true
+          },
+          "primary_key": {
+            "description": "Whether or not the field represents a primary key.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "project_name": {
+            "description": "The name of the project this field is defined in.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "requires_refresh_on_sort": {
+            "description": "When true, it's not possible to re-sort this field's values without re-running the SQL query, due to database logic that affects the sort.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "scope": {
+            "description": "The LookML scope this field belongs to. The scope is typically the field's view.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "sortable": {
+            "description": "Whether this field can be sorted.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "source_file": {
+            "description": "The path portion of source_file_path.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "source_file_path": {
+            "description": "The fully-qualified path of the project file this field is defined in.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "sql": {
+            "description": "SQL expression as defined in the LookML model. The SQL syntax shown here is a representation intended for auditability, and is not neccessarily an exact match for what will ultimately be run in the database. It may contain special LookML syntax or annotations that are not valid SQL. This will be null if the current user does not have the see_lookml permission for the field's model.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "sql_case": {
+            "description": "An array of conditions and values that make up a SQL Case expression, as defined in the LookML model. The SQL syntax shown here is a representation intended for auditability, and is not neccessarily an exact match for what will ultimately be run in the database. It may contain special LookML syntax or annotations that are not valid SQL. This will be null if the current user does not have the see_lookml permission for the field's model.",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreFieldSqlCase"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "strict_value_format": {
+            "description": "If yes, the field will not be localized with the user attribute number_format. Defaults to no",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "suggest_dimension": {
+            "description": "The name of the dimension to base suggest queries from.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "suggest_explore": {
+            "description": "The name of the explore to base suggest queries from.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "suggestable": {
+            "description": "Whether or not suggestions are possible for this field.",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "suggestions": {
+            "description": "If available, a list of suggestions for this field. For most fields, a suggest query is a more appropriate way to get an up-to-date list of suggestions. Or use enumerations to list all the possible values.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "tags": {
+            "description": "An array of arbitrary string tags provided in the model for this field.",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": false
+          },
+          "time_interval": {
+            "$ref": "#/components/schemas/LookmlModelExploreFieldTimeInterval",
+            "description": "Details on the time interval this field represents, if it is_timeframe.",
+            "readOnly": true,
+            "x-looker-nullable": true
+          },
+          "times_used": {
+            "description": "The number of times this field has been used in queries",
+            "format": "int64",
+            "readOnly": true,
+            "type": "integer",
+            "x-looker-nullable": false
+          },
+          "type": {
+            "description": "The LookML type of the field.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "user_attribute_filter_types": {
+            "description": "An array of user attribute types that are allowed to be used in filters on this field. Valid values are: \"advanced_filter_string\", \"advanced_filter_number\", \"advanced_filter_datetime\", \"string\", \"number\", \"datetime\", \"relative_url\", \"yesno\", \"zipcode\".",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "advanced_filter_string",
+              "advanced_filter_number",
+              "advanced_filter_datetime",
+              "string",
+              "number",
+              "datetime",
+              "relative_url",
+              "yesno",
+              "zipcode"
+            ]
+          },
+          "value_format": {
+            "description": "If specified, the LookML value format string for formatting values of this field.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "view": {
+            "description": "The name of the view this field belongs to.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "view_label": {
+            "description": "The human-readable label of the view the field belongs to.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "week_start_day": {
+            "description": "The name of the starting day of the week. Valid values are: \"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\", \"saturday\", \"sunday\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ]
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldEnumeration": {
+        "properties": {
+          "label": {
+            "description": "Label",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "value": {
+            "description": "Value",
+            "format": "any",
+            "readOnly": true,
+            "type": "any",
+            "x-looker-nullable": true,
+            "x-looker-polymorphic-types": [
+              {
+                "type": "string"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldMapLayer": {
+        "properties": {
+          "extents_json_url": {
+            "description": "Specifies the URL to a JSON file that defines the geographic extents of each region available in the map layer. This data is used to automatically center the map on the available data for visualization purposes. The JSON file must be a JSON object where the keys are the mapping value of the feature (as specified by property_key) and the values are arrays of four numbers representing the west longitude, south latitude, east longitude, and north latitude extents of the region. The object must include a key for every possible value of property_key.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "feature_key": {
+            "description": "Specifies the name of the TopoJSON object that the map layer references. If not specified, use the first object..",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "format": {
+            "description": "Specifies the data format of the region information. Valid values are: \"topojson\", \"vector_tile_region\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "topojson",
+              "vector_tile_region"
+            ]
+          },
+          "max_zoom_level": {
+            "description": "The minimum zoom level that the map layer may be displayed at, for visualizations that support zooming.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "integer",
+            "x-looker-nullable": true
+          },
+          "min_zoom_level": {
+            "description": "The maximum zoom level that the map layer may be displayed at, for visualizations that support zooming.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "integer",
+            "x-looker-nullable": true
+          },
+          "name": {
+            "description": "Name of the map layer, as defined in LookML.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "projection": {
+            "description": "The preferred geographic projection of the map layer when displayed in a visualization that supports multiple geographic projections.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "property_key": {
+            "description": "Selects which property from the TopoJSON data to plot against. TopoJSON supports arbitrary metadata for each region. When null, the first matching property should be used.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "property_label_key": {
+            "description": "Which property from the TopoJSON data to use to label the region. When null, property_key should be used.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "url": {
+            "description": "URL to the map layer resource.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldMeasureFilters": {
+        "properties": {
+          "condition": {
+            "description": "Filter condition value",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "field": {
+            "description": "Filter field name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldPeriodOverPeriodParams": {
+        "properties": {
+          "based_on": {
+            "description": "Specifies the measure that will be calculated over the different periods.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "based_on_time": {
+            "description": "Specifies the time dimension that this measure will operate over.",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "kind": {
+            "description": "The type of calculation for the period_over_period measure. Valid values are: \"previous\", \"difference\", \"relative_change\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "previous",
+              "difference",
+              "relative_change"
+            ]
+          },
+          "period": {
+            "description": "Specifies the time frame for the comparison. Valid values are: \"year\", \"fiscal_year\", \"quarter\", \"fiscal_quarter\", \"month\", \"week\", \"date\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "year",
+              "fiscal_year",
+              "quarter",
+              "fiscal_quarter",
+              "month",
+              "week",
+              "date"
+            ]
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldSqlCase": {
+        "properties": {
+          "condition": {
+            "description": "SQL Case condition expression",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "value": {
+            "description": "SQL Case label value",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldTimeInterval": {
+        "properties": {
+          "count": {
+            "description": "The number of intervals this field represents a grouping of.",
+            "format": "int64",
+            "readOnly": true,
+            "type": "integer",
+            "x-looker-nullable": false
+          },
+          "name": {
+            "description": "The type of time interval this field represents a grouping of. Valid values are: \"day\", \"hour\", \"minute\", \"second\", \"millisecond\", \"microsecond\", \"week\", \"month\", \"quarter\", \"year\".",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false,
+            "x-looker-values": [
+              "day",
+              "hour",
+              "minute",
+              "second",
+              "millisecond",
+              "microsecond",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ]
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreFieldset": {
+        "properties": {
+          "dimensions": {
+            "description": "Array of dimensions",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreField"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "filters": {
+            "description": "Array of filters",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreField"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "measures": {
+            "description": "Array of measures",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreField"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "parameters": {
+            "description": "Array of parameters",
+            "items": {
+              "$ref": "#/components/schemas/LookmlModelExploreField"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreJoins": {
+        "properties": {
+          "dependent_fields": {
+            "description": "Fields referenced by the join",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "fields": {
+            "description": "Fields of the joined view to pull into this explore",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "foreign_key": {
+            "description": "Name of the dimension in this explore whose value is in the primary key of the joined view",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "from": {
+            "description": "Name of view to join",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "name": {
+            "description": "Name of this join (and name of the view to join)",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "outer_only": {
+            "description": "Specifies whether all queries must use an outer join",
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": true
+          },
+          "relationship": {
+            "description": "many_to_one, one_to_one, one_to_many, many_to_many",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "required_joins": {
+            "description": "Names of joins that must always be included in SQL queries",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "sql_foreign_key": {
+            "description": "SQL expression that produces a foreign key",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "sql_on": {
+            "description": "SQL ON expression describing the join condition",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "sql_table_name": {
+            "description": "SQL table name to join",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "type": {
+            "description": "The join type: left_outer, full_outer, inner, or cross",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "view_label": {
+            "description": "Label to display in UI selectors",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreSet": {
+        "properties": {
+          "name": {
+            "description": "Name",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "value": {
+            "description": "Value set",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "LookmlModelExploreSupportedMeasureType": {
+        "properties": {
+          "dimension_type": {
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "measure_types": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "ValidationError": {
+        "properties": {
+          "documentation_url": {
+            "description": "Documentation link",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "errors": {
+            "description": "Error detail array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationErrorDetail"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "message": {
+            "description": "Error details",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "required": [
+          "message",
+          "documentation_url"
+        ],
+        "x-looker-status": "stable"
+      },
+      "ValidationErrorDetail": {
+        "properties": {
+          "code": {
+            "description": "Error code",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "documentation_url": {
+            "description": "Documentation link",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "field": {
+            "description": "Field with error",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "message": {
+            "description": "Error info message",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "required": [
+          "documentation_url"
+        ],
+        "x-looker-status": "stable"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "Looker Team",
+      "url": "https://help.looker.com"
+    },
+    "description": "\nAPI 4.0 is the current release of the Looker API. API 3.x has been removed.\n\n### Authorization\n\nThe classic method of API authorization uses Looker **API** credentials for authorization and access control.\nLooker admins can create API credentials on Looker's **Admin/Users** page.\n\nAPI 4.0 adds additional ways to authenticate API requests, including OAuth and CORS requests.\n\nFor details, see [Looker API Authorization](https://cloud.google.com/looker/docs/r/api/authorization).\n\n\n### API Explorer\n\nThe API Explorer is a Looker-provided utility with many new and unique features for learning and using the Looker API and SDKs.\n\nFor details, see the [API Explorer documentation](https://cloud.google.com/looker/docs/r/api/explorer).\n\n\n### Looker Language SDKs\n\nThe Looker API is a RESTful system that should be usable by any programming language capable of making\nHTTPS requests. SDKs for a variety of programming languages are also provided to streamline using the API. Looker\nhas an OpenSource [sdk-codegen project](https://github.com/looker-open-source/sdk-codegen) that provides several\nlanguage SDKs. Language SDKs generated by `sdk-codegen` have an Authentication manager that can automatically\nauthenticate API requests when needed.\n\nFor details on available Looker SDKs, see [Looker API Client SDKs](https://cloud.google.com/looker/docs/r/api/client_sdks).\n\n\n### API Versioning\n\nFuture releases of Looker expand the latest API version release-by-release to securely expose more and more of the core\npower of the Looker platform to API client applications. API endpoints marked as \"beta\" may receive breaking changes without\nwarning (but we will try to avoid doing that). Stable (non-beta) API endpoints should not receive breaking\nchanges in future releases.\n\nFor details, see [Looker API Versioning](https://cloud.google.com/looker/docs/r/api/versioning).\n\n\n### In This Release\n\nAPI 4.0 is the only supported API version for Looker starting with release 23.18. API 3.0 and 3.1 have been removed.\n\nAPI 4.0 has better support for strongly typed languages like TypeScript, Kotlin, Swift, Go, C#, and more.\n\nSee the [API 4.0 GA announcement](https://developers.looker.com/api/advanced-usage/version-4-ga) for more information\nabout API 4.0.\n\nThe API Explorer can be used to [interactively compare](https://cloud.google.com/looker/docs/r/api/explorer#comparing_api_versions) the differences between API 3.1 and 4.0.\n\n\n### API and SDK Support Policies\n\nLooker API versions and language SDKs have varying support levels. Please read the API and SDK\n[support policies](https://cloud.google.com/looker/docs/r/api/support-policy) for more information.\n\n\n",
+    "license": {
+      "name": "EULA",
+      "url": "https://example.looker.com/eula"
+    },
+    "title": "Looker API 4.0 Reference",
+    "version": "4.0.25.8",
+    "x-looker-release-version": "25.8.15"
+  },
+  "openapi": "3.0.0",
+  "paths": {}
+}
