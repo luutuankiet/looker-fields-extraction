@@ -25,7 +25,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = ROOT / "looker_40_openapi.json"
-DEFAULT_OUTPUT_DIR = ROOT / "src" / "looker_extractor" / "_swagger"
+DEFAULT_OUTPUT_DIR = ROOT / "src" / "looker_extractor" / "plugins" / "lookml_fields" / "swagger"
 
 # Entry-point definitions for field extraction.
 # Transitive $refs are reached automatically by BFS over collect_refs().

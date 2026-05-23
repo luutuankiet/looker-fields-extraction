@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from looker_extractor._swagger import (
+from looker_extractor.core.swagger import (
     SwaggerSourceKind,
     load_swagger,
     resolve_swagger_source,

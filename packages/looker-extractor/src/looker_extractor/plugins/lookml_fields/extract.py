@@ -16,8 +16,9 @@ import asyncio
 import logging
 from typing import Any, AsyncIterator
 
-from ._swagger.types import LookmlModelExplore, LookmlModelExploreField
-from .client import LookerClient
+from looker_extractor.core.client import LookerClient
+
+from .swagger.types import LookmlModelExplore, LookmlModelExploreField
 
 logger = logging.getLogger(__name__)
 

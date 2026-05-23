@@ -52,10 +52,10 @@ def extract(
         level=logging.DEBUG if verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    from .client import LookerClient
-    from .config import load_settings
-    from .extract import extract_explore_fields
+    from .core.client import LookerClient
+    from .core.config import load_settings
     from .output import get_writer
+    from .plugins.lookml_fields.extract import extract_explore_fields
 
     settings = load_settings(env_file)
     typer.echo(f"Connecting to {settings.looker_base_url}...")
@@ -98,8 +98,8 @@ def dump(
     """Dump the raw API response for one explore to a local JSON file."""
     import json
 
-    from .client import LookerClient
-    from .config import load_settings
+    from .core.client import LookerClient
+    from .core.config import load_settings
 
     settings = load_settings(env_file)
     target = output or Path(f"dump_{model}_{explore}.json")
@@ -128,9 +128,9 @@ def refresh_schema(
     Per-instance swagger drift detection (vs bundled baseline) lands in
     Phase 2 -- this command currently just persists the spec.
     """
-    from ._swagger import user_config_path, write_user_config
-    from .client import LookerClient
-    from .config import load_settings
+    from .core.client import LookerClient
+    from .core.config import load_settings
+    from .core.swagger import user_config_path, write_user_config
 
     settings = load_settings(env_file)
     target = output or user_config_path()
@@ -150,8 +150,8 @@ def info(
 ) -> None:
     """Show instance info: models, explores, field counts."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
-    from .client import LookerClient
-    from .config import load_settings
+    from .core.client import LookerClient
+    from .core.config import load_settings
 
     settings = load_settings(env_file)
 

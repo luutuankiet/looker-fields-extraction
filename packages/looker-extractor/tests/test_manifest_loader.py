@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from looker_extractor.manifest import (
+from looker_extractor.core.manifest import (
     CURRENT_SCHEMA_VERSION,
     ManifestSourceKind,
     ManifestSpec,
@@ -47,7 +47,7 @@ def test_default_falls_back_to_bundled() -> None:
     src = resolve_manifest_source()
     assert src.kind is ManifestSourceKind.BUNDLED
     assert src.path is not None and src.path.is_file()
-    assert src.path.name == "fields.yaml"
+    assert src.path.name == "manifest.yaml"
 
 
 def test_bundled_manifest_validates_against_spec() -> None:
