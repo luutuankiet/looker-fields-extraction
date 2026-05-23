@@ -1,0 +1,62 @@
+"""{{ plugin_class_name }} — extract one row per Looker {{ plugin_entry_point_key }} record.
+
+Hits GET /api/4.0/{{ looker_endpoint }}; validates each response record through
+the plugin-owned swagger-generated pydantic type (the tripwire); yields
+``model_dump()`` dicts with a minimal ``_extract_{{ plugin_entry_point_key }}_*``
+lineage envelope.
+
+TODO BEFORE FIRST EXTRACT:
+  1. Update ``swagger_seeds`` below with the OAS3 schema names you need.
+  2. Regenerate types: see README "Regenerate swagger types".
+  3. Uncomment the typed import + replace the stub yield with the real loop.
+  4. Run `pytest -v` to verify conformance.
+"""
+
+from __future__ import annotations
+
+from typing import Any, AsyncIterator
+
+from looker_extractor_sdk import Plugin, stamp_lineage
+
+# After running regen, uncomment:
+# from .swagger.types import {{ plugin_class_name | replace('Plugin', '') }}
+
+
+class {{ plugin_class_name }}(Plugin):
+    """Passthru extractor for the Looker /api/4.0/{{ looker_endpoint }} endpoint."""
+
+    name = "{{ plugin_entry_point_key }}"
+    version = "0.1.0a0"
+    description = (
+        "{{ plugin_description }}"
+    )
+    # Add the OAS3 schema names your plugin needs.
+    # "Error" + "ValidationError" are required by the conformance harness.
+    swagger_seeds = [
+        # "{{ plugin_class_name | replace('Plugin', '') }}",
+        "Error",
+        "ValidationError",
+    ]
+
+    async def extract(
+        self,
+        client: Any,
+        *,
+        filters: dict[str, str] | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream one passthru dict per record.
+
+        Replace the stub below with a real loop, e.g.::
+
+            raw_records = await client.get("{{ looker_endpoint }}", params=None)
+            for raw in raw_records:
+                typed = {{ plugin_class_name | replace('Plugin', '') }}.model_validate(raw)
+                row = typed.model_dump()
+                stamp_lineage(row, {{ plugin_entry_point_key }}_id=str(typed.id))
+                yield row
+        """
+        # Stub: yield one record so all conformance tests can pass at init time.
+        # Replace this with the real implementation.
+        _ = client  # unused in stub
+        _ = filters  # unused in stub
+        yield stamp_lineage({}, {{ plugin_entry_point_key }}_id="stub")

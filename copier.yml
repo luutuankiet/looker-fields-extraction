@@ -1,0 +1,82 @@
+# Copier template manifest — looker-extractor plugins (template-v0.1.0).
+#
+# Render from a local monorepo clone:
+#   copier copy . ./my-plugin --trust
+# Or from URL:
+#   copier copy gh:luutuankiet/looker-extractor.git ./my-plugin --vcs-ref=template-v0.1.0 --trust
+# Or via the bundled CLI (added in Phase 3 Iter 4):
+#   lx plugins init my-plugin
+#
+# To pull template improvements later, from your plugin repo:
+#   copier update --trust
+
+_min_copier_version: "9.0.0"
+_subdirectory: "templates/plugin-python"
+_answers_file: ".copier-answers.yml"
+_exclude:
+  - "*.pyc"
+  - "__pycache__"
+  - ".git"
+  - ".venv"
+
+# Files the user edits after init — preserve on `copier update`.
+_skip_if_exists:
+  - "src/{{plugin_slug}}/plugin.py"
+  - "src/{{plugin_slug}}/swagger/types.py"
+  - "tests/test_conformance.py"
+
+# ----- Questions -----
+
+plugin_slug:
+  type: str
+  help: "Python package name, snake_case (e.g. looker_extractor_plugin_users)"
+
+plugin_distribution_name:
+  type: str
+  help: "PyPI distribution name, kebab-case"
+  default: "{{ plugin_slug | replace('_', '-') }}"
+
+plugin_entry_point_key:
+  type: str
+  help: "CLI flag value passed as --plugin <KEY> (e.g. 'users')"
+  default: "{{ plugin_slug | replace('looker_extractor_plugin_', '') }}"
+
+plugin_class_name:
+  type: str
+  help: "Python class name, PascalCase (e.g. UsersPlugin)"
+  default: "{{ plugin_entry_point_key | replace('_', ' ') | title | replace(' ', '') }}Plugin"
+
+plugin_description:
+  type: str
+  help: "One-line description (shown by `lx plugins info`)"
+  default: "looker-extractor plugin: extract Looker {{ plugin_entry_point_key }} records."
+
+author_name:
+  type: str
+  help: "Your name (pyproject [project.authors].name)"
+
+author_email:
+  type: str
+  help: "Your email (pyproject [project.authors].email)"
+
+looker_endpoint:
+  type: str
+  help: "Looker API endpoint path under /api/4.0/"
+  default: "{{ plugin_entry_point_key }}"
+
+min_python:
+  type: str
+  help: "Minimum Python version"
+  default: "3.11"
+  choices: ["3.11", "3.12", "3.13"]
+
+license_spdx:
+  type: str
+  help: "SPDX license identifier"
+  default: "Apache-2.0"
+  choices: ["Apache-2.0", "MIT", "BSD-3-Clause"]
+
+sdk_version_pin:
+  type: str
+  help: "SDK version constraint (PEP 440)"
+  default: ">=0.1.0,<0.2"

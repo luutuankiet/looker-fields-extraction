@@ -1,0 +1,35 @@
+"""Conformance: {{ plugin_class_name }} meets the SDK contract.
+
+Inherits 9 generic conformance tests from BasePluginContract
+(looker-extractor-tests-plugin). Add plugin-specific tests below.
+
+To enable extract-behavior tests, override the ``fake_client`` fixture
+with a class exposing ``async def get(self, path, params=None)``.
+"""
+
+from __future__ import annotations
+
+import pytest
+from looker_extractor_tests_plugin import BasePluginContract
+
+from {{ plugin_slug }}.plugin import {{ plugin_class_name }}
+
+
+class Test{{ plugin_class_name }}Conformance(BasePluginContract):
+    """All 9 inherited conformance tests + plugin-specific assertions below."""
+
+    plugin_class = {{ plugin_class_name }}
+
+    # ----- Enable extract-behavior tests by overriding this fixture -----
+    # @pytest.fixture
+    # def fake_client(self):
+    #     class _Fake:
+    #         async def get(self, path, params=None):
+    #             return [{"id": "1", "name": "alpha"}]
+    #     return _Fake()
+
+    # ----- Plugin-specific tests -----
+
+    def test_{{ plugin_entry_point_key }}_name_pinned(self) -> None:
+        """name is the entry-point key + the CLI --plugin flag; never change accidentally."""
+        assert self.plugin_class.name == "{{ plugin_entry_point_key }}"

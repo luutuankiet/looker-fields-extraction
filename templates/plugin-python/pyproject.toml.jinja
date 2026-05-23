@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "{{ plugin_distribution_name }}"
+version = "0.1.0a0"
+description = "{{ plugin_description }}"
+readme = "README.md"
+requires-python = ">={{ min_python }}"
+license = {text = "{{ license_spdx }}"}
+authors = [
+    {name = "{{ author_name }}", email = "{{ author_email }}"},
+]
+dependencies = [
+    "looker-extractor-sdk{{ sdk_version_pin }}",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "looker-extractor-tests-plugin>=0.1.0a0,<0.2",
+    "datamodel-code-generator>=0.25",
+]
+
+[project.entry-points."looker_extractor.plugins"]
+{{ plugin_entry_point_key }} = "{{ plugin_slug }}.plugin:{{ plugin_class_name }}"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/{{ plugin_slug }}"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
