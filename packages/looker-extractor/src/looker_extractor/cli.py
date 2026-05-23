@@ -157,6 +157,75 @@ def info(
     asyncio.run(_run())
 
 
+@plugins_app.command("init")
+def plugins_init(
+    name: str = typer.Argument(...,
+        help="Plugin distribution name (e.g. 'looker-extractor-plugin-users')."),
+    template_url: str = typer.Option(
+        "gh:luutuankiet/looker-extractor.git", "--template-url",
+        help="Copier template source URL or local path."),
+    template_ref: str = typer.Option(
+        "template-v0.1.0", "--template-ref",
+        help="Copier template git ref (tag, branch, SHA)."),
+    output_dir: Optional[Path] = typer.Option(
+        None, "--output-dir", "-o",
+        help="Output directory (default: ./<name>)."),
+    defaults: bool = typer.Option(
+        False, "--defaults",
+        help="Use template defaults for unanswered questions (non-interactive)."),
+) -> None:
+    """Scaffold a new plugin from the copier template.
+
+    Example:
+        lx plugins init looker-extractor-plugin-users
+
+    Requires the `init` extra: pip install 'looker-extractor[init]'
+    """
+    try:
+        from copier import run_copy
+    except ImportError:
+        typer.echo(
+            "Error: copier is not installed. Install scaffold deps with one of:\n"
+            "  pip install 'looker-extractor[init]'  # recommended\n"
+            "  uv add 'looker-extractor[init]'\n"
+            "  pip install copier                    # standalone",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    dst = output_dir or Path.cwd() / name
+    if dst.exists() and any(dst.iterdir()):
+        typer.echo(f"Error: destination {dst} exists and is not empty.", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Scaffolding plugin {name!r} at {dst}")
+    typer.echo(f"  Template: {template_url}@{template_ref}")
+
+    run_copy(
+        src_path=template_url,
+        dst_path=str(dst),
+        vcs_ref=template_ref,
+        unsafe=True,  # equivalent to copier CLI --trust
+        defaults=defaults,
+    )
+
+    try:
+        rel = dst.relative_to(Path.cwd())
+        shown = str(rel) if str(rel) != "." else str(dst)
+    except ValueError:
+        shown = str(dst)
+
+    typer.echo("")
+    typer.echo("Done. Next steps:")
+    typer.echo(f"  cd {shown}")
+    typer.echo("  uv sync --extra dev")
+    typer.echo("  uv run pytest -v")
+    typer.echo("")
+    typer.echo("Edit src/<plugin_slug>/plugin.py to implement extract(), then:")
+    typer.echo("  uv run looker-extractor plugins list")
+    typer.echo("  uv run looker-extractor extract --plugin <entry_point_key> -o out.jsonl")
+
+
 @plugins_app.command("list")
 def plugins_list() -> None:
     """List installed plugins."""

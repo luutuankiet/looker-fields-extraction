@@ -27,12 +27,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Scaffold-time deps for `lx plugins init` (copier + jinja). Optional so users
+# who only run `extract` don't pay copier's ~13 transitive deps.
+init = [
+    "copier>=9.15",
+]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.4",
     "datamodel-code-generator>=0.25",
     "looker-extractor-tests-plugin>=0.1.0a0,<0.2",
+    "copier>=9.15",
 ]
 
 [project.scripts]
