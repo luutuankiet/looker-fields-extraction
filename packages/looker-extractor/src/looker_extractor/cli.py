@@ -226,6 +226,108 @@ def plugins_init(
     typer.echo("  uv run looker-extractor extract --plugin <entry_point_key> -o out.jsonl")
 
 
+@plugins_app.command("validate")
+def plugins_validate(
+    name: str = typer.Argument(..., help="Plugin entry-point key."),
+) -> None:
+    """Validate a plugin against the SDK contract without hitting the network.
+
+    Checks performed:
+      1. Plugin imports + entry-point resolves
+      2. Required class attrs (name / version / description / swagger_seeds) populated
+      3. extract() is an async generator function
+      4. Dry-run: extract(no_op_client) completes without raising
+
+    Useful as a CI gate in third-party plugin repos to catch SDK-contract drift
+    between releases without a live Looker instance.
+    """
+    import asyncio
+    import inspect
+    from typing import Any
+
+    from .registry import get_plugin
+
+    # ---- 1. Import + entry-point resolve ----
+    try:
+        cls = get_plugin(name)
+    except ValueError as e:
+        typer.echo(f"FAIL: {e}", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"Validating plugin: {cls.__name__} (entry-point: {name!r})")
+
+    errors: list[str] = []
+
+    # ---- 2. Class attrs ----
+    if not cls.name:
+        errors.append("plugin_class.name is empty")
+    if not cls.version:
+        errors.append("plugin_class.version is empty")
+    if not cls.description:
+        errors.append("plugin_class.description is empty")
+    if not cls.swagger_seeds:
+        errors.append("plugin_class.swagger_seeds is empty")
+    elif "Error" not in cls.swagger_seeds or "ValidationError" not in cls.swagger_seeds:
+        errors.append(
+            "swagger_seeds should include canonical 'Error' + 'ValidationError'"
+        )
+
+    # ---- 3. extract is async generator ----
+    if not inspect.isasyncgenfunction(cls.extract):
+        errors.append(
+            f"{cls.__name__}.extract must be an async generator "
+            "(declared `async def extract(...)` with `yield` inside)"
+        )
+
+    # ---- 4. Dry-run extract with no-op client ----
+    class _NoopClient:
+        """Returns empty results for any method a plugin might call."""
+
+        async def get(self, path: str, params: Any = None) -> list[dict[str, Any]]:
+            return []
+
+        async def all_lookml_models(self) -> list[dict[str, Any]]:
+            return []
+
+        async def lookml_model_explore(
+            self, model: str, explore: str
+        ) -> dict[str, Any]:
+            return {
+                "name": explore,
+                "model_name": model,
+                "project_name": "_validate_",
+                "fields": {},
+            }
+
+        async def get_swagger(self) -> dict[str, Any]:
+            return {}
+
+    async def _dry_run() -> int:
+        plugin = cls()
+        count = 0
+        async for _ in plugin.extract(_NoopClient()):
+            count += 1
+        return count
+
+    try:
+        count = asyncio.run(_dry_run())
+        typer.echo(f"  dry-run extract(noop_client) -> {count} rows (no exceptions)")
+    except Exception as e:
+        errors.append(
+            f"dry-run extract(noop_client) raised "
+            f"{type(e).__name__}: {e}"
+        )
+
+    # ---- Report ----
+    if errors:
+        typer.echo(f"\nFAIL: {name!r} has {len(errors)} contract issue(s):", err=True)
+        for e in errors:
+            typer.echo(f"  - {e}", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"\nPASS: {cls.name!r} v{cls.version} - SDK contract OK")
+
+
 @plugins_app.command("list")
 def plugins_list() -> None:
     """List installed plugins."""
