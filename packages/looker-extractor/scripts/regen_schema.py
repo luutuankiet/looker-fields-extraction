@@ -61,6 +61,27 @@ PLUGIN_REGISTRY: dict[str, dict[str, Any]] = {
             "ValidationError",
         ],
     },
+    "users": {
+        "output_dir": (
+            ROOT.parent / "looker-extractor-plugin-users" / "src"
+            / "looker_extractor_plugin_users" / "swagger"
+        ),
+        "seeds": [
+            "User",
+            "CredentialsApi3",
+            "CredentialsEmail",
+            "CredentialsEmailSearch",
+            "CredentialsEmbed",
+            "CredentialsGoogle",
+            "CredentialsLDAP",
+            "CredentialsLookerOpenid",
+            "CredentialsOIDC",
+            "CredentialsSaml",
+            "CredentialsTotp",
+            "Error",
+            "ValidationError",
+        ],
+    },
 }
 
 
