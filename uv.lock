@@ -406,6 +406,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "datamodel-code-generator" },
+    { name = "looker-extractor-tests-plugin" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -416,6 +417,7 @@ requires-dist = [
     { name = "datamodel-code-generator", marker = "extra == 'dev'", specifier = ">=0.25" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
     { name = "looker-extractor-sdk", editable = "packages/looker-extractor-sdk" },
+    { name = "looker-extractor-tests-plugin", marker = "extra == 'dev'", editable = "packages/looker-extractor-tests-plugin" },
     { name = "looker-sdk", specifier = ">=24.0" },
     { name = "orjson", specifier = ">=3.10" },
     { name = "platformdirs", specifier = ">=4.0" },
@@ -442,6 +444,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "looker-extractor-tests-plugin" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -449,6 +452,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "looker-extractor-sdk", editable = "packages/looker-extractor-sdk" },
+    { name = "looker-extractor-tests-plugin", marker = "extra == 'dev'", editable = "packages/looker-extractor-tests-plugin" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },

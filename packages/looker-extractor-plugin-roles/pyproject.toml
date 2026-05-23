@@ -21,12 +21,14 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "looker-extractor-tests-plugin>=0.1.0a0,<0.2",
 ]
 
 [tool.uv.sources]
-# Resolve SDK from the workspace at dev time; published wheel uses PyPI
-# (build with `uv build --package looker-extractor-plugin-roles --no-sources`).
+# Resolve SDK + tests-plugin from the workspace at dev time; published wheel
+# uses PyPI (build with `uv build --package looker-extractor-plugin-roles --no-sources`).
 looker-extractor-sdk = { workspace = true }
+looker-extractor-tests-plugin = { workspace = true }
 
 [project.entry-points."looker_extractor.plugins"]
 roles = "looker_extractor_plugin_roles.plugin:RolesPlugin"
