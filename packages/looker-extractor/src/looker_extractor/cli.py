@@ -1,15 +1,12 @@
 """CLI entry point for looker-extractor.
 
-Post-pivot surface (v0.3.0a0):
-  extract        -- stream explore-field passthru dicts to JSONL or Parquet
-  dump           -- one-shot raw API dump for a single explore (debugging)
-  refresh-schema -- fetch live swagger.json and persist to XDG
-  info           -- list models + explore counts for the configured instance
-
-Gone (pre-pivot, deprecated):
-  verify           -- projection-layer dedup audit (no projection any more)
-  refresh-manifest -- manifest-driven column drift detection (no columns)
-  regen-types      -- FieldRecord codegen (no FieldRecord)
+Post-pivot surface (v0.3.0a0 + plugin platform):
+  extract                -- run a plugin's extractor (default plugin: lookml_fields)
+  dump <model> <explore> -- raw API dump for one explore (debug)
+  refresh-schema         -- fetch live swagger.json and persist to XDG
+  info                   -- list models + explore counts for the configured instance
+  plugins list           -- list installed plugins
+  plugins info <name>    -- show plugin metadata + swagger_seeds
 """
 
 from __future__ import annotations
@@ -23,13 +20,17 @@ import typer
 
 app = typer.Typer(
     name="looker-extractor",
-    help="Extract entity metadata from any Looker instance via the API (passthru).",
+    help="Plugin-based extractor for the Looker v4.0 API.",
     no_args_is_help=True,
 )
+plugins_app = typer.Typer(name="plugins", help="Plugin management.", no_args_is_help=True)
+app.add_typer(plugins_app, name="plugins")
 
 
 @app.command()
 def extract(
+    plugin: str = typer.Option("lookml_fields", "--plugin", "-p",
+        help="Plugin name to invoke (default: lookml_fields)."),
     output: Path = typer.Option("output.jsonl", "--output", "-o", help="Output file path"),
     format: str = typer.Option("jsonl", "--format", "-f", help="Output format: jsonl, parquet"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Filter to specific model"),
@@ -38,16 +39,7 @@ def extract(
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
-    """Extract explore-field metadata from the configured Looker instance.
-
-    Output is one row per field, passthru-shaped from the LookmlModelExploreField
-    pydantic model. Nested structures (enumerations, links, time_interval, etc.)
-    are preserved as nested JSON/Parquet structs. A minimal lineage envelope
-    (``_extract_model_name``, ``_extract_explore_name``,
-    ``_extract_explore_project_name``, ``_extract_field_category``) is added
-    per row so the warehouse can join back to model/explore without inspecting
-    nested structures.
-    """
+    """Run the specified plugin's extractor."""
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -55,21 +47,25 @@ def extract(
     from .core.client import LookerClient
     from .core.config import load_settings
     from .output import get_writer
-    from .plugins.lookml_fields.extract import extract_explore_fields
+    from .registry import get_plugin
 
+    PluginCls = get_plugin(plugin)
+    plugin_inst = PluginCls()
     settings = load_settings(env_file)
-    typer.echo(f"Connecting to {settings.looker_base_url}...")
+    typer.echo(f"Connecting to {settings.looker_base_url} (plugin={plugin})...")
+
+    filters: dict[str, str] = {}
+    if model:
+        filters["model"] = model
+    if explore:
+        filters["explore"] = explore
 
     async def _run() -> None:
         async with LookerClient(settings, concurrency=concurrency) as client:
             writer = get_writer(format, output)
             count = 0
             batch: list[dict] = []
-            async for record in extract_explore_fields(
-                client,
-                model_filter=model,
-                explore_filter=explore,
-            ):
+            async for record in plugin_inst.extract(client, filters=filters):
                 batch.append(record)
                 count += 1
                 if len(batch) >= 500:
@@ -78,7 +74,7 @@ def extract(
             if batch:
                 writer.write_records(batch)
             writer.close()
-            typer.echo(f"Done. Extracted {count} fields to {output}")
+            typer.echo(f"Done. Extracted {count} records to {output}")
 
     asyncio.run(_run())
 
@@ -87,17 +83,12 @@ def extract(
 def dump(
     model: str = typer.Argument(..., help="Model name to dump"),
     explore: str = typer.Argument(..., help="Explore name to dump"),
-    output: Path = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="Output JSON file (default: dump_<model>_<explore>.json)",
-    ),
+    output: Path = typer.Option(None, "--output", "-o",
+        help="Output JSON file (default: dump_<model>_<explore>.json)"),
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
 ) -> None:
     """Dump the raw API response for one explore to a local JSON file."""
     import json
-
     from .core.client import LookerClient
     from .core.config import load_settings
 
@@ -115,19 +106,11 @@ def dump(
 
 @app.command("refresh-schema")
 def refresh_schema(
-    output: Optional[Path] = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="Target path for the fresh swagger.json (default: XDG user config)",
-    ),
+    output: Optional[Path] = typer.Option(None, "--output", "-o",
+        help="Target path for the fresh swagger.json (default: XDG user config)"),
     env_file: Path = typer.Option(".env", "--env", help="Path to .env file"),
 ) -> None:
-    """Fetch live swagger.json from the configured instance and persist it.
-
-    Per-instance swagger drift detection (vs bundled baseline) lands in
-    Phase 2 -- this command currently just persists the spec.
-    """
+    """Fetch live swagger.json from the configured instance and persist it."""
     from .core.client import LookerClient
     from .core.config import load_settings
     from .core.swagger import user_config_path, write_user_config
@@ -167,13 +150,39 @@ def info(
                 if not explores:
                     continue
                 total_explores += len(explores)
-                typer.echo(
-                    f"{m['name']:<40} {m.get('project_name', ''):<30} {len(explores):>10}"
-                )
+                typer.echo(f"{m['name']:<40} {m.get('project_name', ''):<30} {len(explores):>10}")
             typer.echo("-" * 82)
             typer.echo(f"Total: {len(models)} models, {total_explores} explores")
 
     asyncio.run(_run())
+
+
+@plugins_app.command("list")
+def plugins_list() -> None:
+    """List installed plugins."""
+    from .registry import discover_plugins
+    found = discover_plugins()
+    if not found:
+        typer.echo("No plugins installed.")
+        return
+    typer.echo(f"{'NAME':<25} {'VERSION':<12} DESCRIPTION")
+    typer.echo("-" * 80)
+    for name in sorted(found):
+        cls = found[name]
+        typer.echo(f"{cls.name:<25} {cls.version:<12} {cls.description}")
+
+
+@plugins_app.command("info")
+def plugins_info(name: str = typer.Argument(..., help="Plugin name")) -> None:
+    """Show detailed info for one plugin."""
+    from .registry import get_plugin
+    cls = get_plugin(name)
+    typer.echo(f"name        : {cls.name}")
+    typer.echo(f"version     : {cls.version}")
+    typer.echo(f"description : {cls.description}")
+    typer.echo(f"swagger_seeds ({len(cls.swagger_seeds)}):")
+    for s in cls.swagger_seeds:
+        typer.echo(f"  - {s}")
 
 
 if __name__ == "__main__":

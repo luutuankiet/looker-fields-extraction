@@ -1,5 +1,5 @@
-"""Plugin registry: entry-points discovery + plugin lookup.
+"""Plugin registry: entry-points discovery + plugin lookup."""
 
-Populated in a follow-up iteration with discover_plugins() walking the
-``looker_extractor.plugins`` entry-points group.
-"""
+from .discover import PLUGIN_ENTRY_POINT_GROUP, discover_plugins, get_plugin
+
+__all__ = ["PLUGIN_ENTRY_POINT_GROUP", "discover_plugins", "get_plugin"]

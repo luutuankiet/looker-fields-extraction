@@ -53,3 +53,6 @@ line-length = 100
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[project.entry-points."looker_extractor.plugins"]
+lookml_fields = "looker_extractor.plugins.lookml_fields.plugin:LookmlFieldsPlugin"
