@@ -1,10 +1,11 @@
 """Pin the precedence chain of manifest.loader.resolve_manifest_source.
 
-Mirrors tests/test_swagger_loader.py exactly — same 7 invariants applied to
+Mirrors tests/test_swagger_loader.py exactly -- same 7 invariants applied to
 the manifest YAML loader (CLI > LOOKER_FIELDS_MANIFEST > XDG > bundled).
 
 The \"bundled validates against ManifestSpec\" test doubles as a sanity check
-that the Phase 2 parser output is well-formed.
+that the post-pivot bundled fields.yaml is well-formed against the simplified
+ManifestSpec (schema_version + entity + extra_fields + type_overrides).
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from looker_fields.manifest import (
+    CURRENT_SCHEMA_VERSION,
     ManifestSourceKind,
     ManifestSpec,
     load_manifest,
@@ -32,15 +34,10 @@ def _write_stub_manifest(path: Path) -> None:
     path.write_text(
         textwrap.dedent(
             """\
-            schema_version: \"1.0.0\"
-            entity: field
-            output_grain: [field_name]
-            columns:
-              - name: field_name
-                type: str
-                api_source: field.name
-                default: \"\"
-                description: stub
+            schema_version: \"2.0\"
+            entity: explore_field
+            extra_fields: {}
+            type_overrides: {}
             """
         )
     )
@@ -56,15 +53,12 @@ def test_default_falls_back_to_bundled() -> None:
 def test_bundled_manifest_validates_against_spec() -> None:
     raw = load_manifest()
     spec = ManifestSpec.model_validate(raw)
-    assert spec.entity == "field"
-    assert spec.schema_version == "1.0.0"
-    # Phase 2 parser emitted 39 cols + 7 derived + 26 exclusions
-    assert len(spec.columns) >= 30, "columns sanity floor"
-    assert len(spec.exclusions) >= 20, "exclusions sanity floor"
-    # All grain columns must be present in columns[]
-    column_names = {c.name for c in spec.columns}
-    for grain in spec.output_grain:
-        assert grain in column_names, f"grain column {grain!r} missing from columns[]"
+    assert spec.entity == "explore_field"
+    assert spec.schema_version == CURRENT_SCHEMA_VERSION
+    # Post-pivot bundled manifest ships empty -- a clean Looker instance
+    # needs no overrides. Per-instance manifests populate these dicts.
+    assert spec.extra_fields == {}
+    assert spec.type_overrides == {}
 
 
 def test_env_overrides_bundled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -105,3 +99,28 @@ def test_user_config_path_under_app_name() -> None:
     p = user_config_path()
     assert p.name == "manifest.yaml"
     assert "looker-fields" in str(p)
+
+
+def test_extra_fields_and_overrides_round_trip(tmp_path: Path) -> None:
+    """Per-instance overrides survive YAML round-trip via ManifestSpec."""
+    custom = tmp_path / "custom.yaml"
+    custom.write_text(
+        textwrap.dedent(
+            """\
+            schema_version: \"2.0\"
+            entity: explore_field
+            extra_fields:
+              custom_lookml_attr: \"str | None\"
+              instance_specific_count: \"int\"
+            type_overrides:
+              times_used: \"int | str | None\"
+            """
+        )
+    )
+    raw = load_manifest(cli_override=custom)
+    spec = ManifestSpec.model_validate(raw)
+    assert spec.extra_fields == {
+        "custom_lookml_attr": "str | None",
+        "instance_specific_count": "int",
+    }
+    assert spec.type_overrides == {"times_used": "int | str | None"}

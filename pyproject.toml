@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "looker-fields"
-version = "0.2.1"
+version = "0.3.0a0"
 description = "Extract field-level metadata from any Looker instance via the API"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,7 +19,6 @@ dependencies = [
     "typer>=0.12",
     "orjson>=3.10",
     "pyarrow>=15.0",
-    "google-cloud-bigquery>=3.20",
     "looker-sdk>=24.0",
     "python-dotenv>=1.0",
     "platformdirs>=4.0",

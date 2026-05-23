@@ -89,8 +89,9 @@ def resolve_manifest_source(cli_override: Path | None = None) -> ManifestSource:
     bundled = _bundled_path()
     if not bundled.is_file():
         raise FileNotFoundError(
-            f"bundled manifest missing at {bundled}; run "
-            f"scripts/parse_field_spec_to_manifest.py"
+            f"bundled manifest scaffold missing at {bundled}; this is a "
+            "packaging bug (the scaffold is checked into the source tree). "
+            "Please report."
         )
     return ManifestSource(ManifestSourceKind.BUNDLED, bundled)
 

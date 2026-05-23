@@ -1,4 +1,14 @@
-# Field Specification v1.1.0
+> ⚠️ **DEPRECATED post-v0.3.0 pivot.** This document describes the v0.1 -- v0.2.1
+> projection-layer architecture which was RIP-OUT in v0.3.0a0. The new shape is
+> a pure passthru of the LookmlModelExploreField pydantic type (generated from
+> the live Looker swagger). There are no fixed Output Columns -- the output IS
+> the swagger entity. See `README.md` for the current shape and
+> `gsd-lite/PROJECT.md` for the pivot rationale. This document is kept for
+> historical reference and as the "why" justification for the new architecture
+> (the drift it documents is real -- we just stopped computing it for you and
+> let the warehouse handle it).
+
+# Field Specification v1.1.0 [HISTORICAL]
 
 Baseline output schema for `looker-fields` extraction tool.
 
