@@ -201,10 +201,48 @@ def plugins_init(
     typer.echo(f"Scaffolding plugin {name!r} at {dst}")
     typer.echo(f"  Template: {template_url}@{template_ref}")
 
+    # Derive template data from CLI args + git config so --defaults can render
+    # the template non-interactively. plugin_slug and author_* have no template
+    # defaults; we supply them here from the distribution name + git config.
+    import subprocess
+
+    def _git_config(key: str) -> str:
+        try:
+            return subprocess.check_output(
+                ["git", "config", key], text=True, stderr=subprocess.DEVNULL
+            ).strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return ""
+
+    plugin_slug = name.replace("-", "_")
+    data: dict[str, object] = {
+        "plugin_slug": plugin_slug,
+        "plugin_distribution_name": name,
+    }
+
+    if defaults:
+        author_name_val = _git_config("user.name")
+        author_email_val = _git_config("user.email")
+        missing = [
+            k for k, v in (("user.name", author_name_val), ("user.email", author_email_val))
+            if not v
+        ]
+        if missing:
+            typer.echo(
+                f"Error: --defaults requires git config {' + '.join(missing)} "
+                "to fill required template fields. Either set them via "
+                "`git config --global user.name/email ...` or rerun without --defaults.",
+                err=True,
+            )
+            raise typer.Exit(1)
+        data["author_name"] = author_name_val
+        data["author_email"] = author_email_val
+
     run_copy(
         src_path=template_url,
         dst_path=str(dst),
         vcs_ref=template_ref,
+        data=data,
         unsafe=True,  # equivalent to copier CLI --trust
         defaults=defaults,
     )
