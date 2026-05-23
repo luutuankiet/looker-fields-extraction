@@ -1,35 +1,27 @@
-# looker-fields
+# looker-extractor
 
-A swagger-typed passthru extractor for the Looker v4.0 API. Authenticate, call the API for an entity, validate against pydantic types generated from the live swagger, and emit the natural nested shape as JSONL or Parquet. No projection, no dedup, no opinionated transforms -- the downstream warehouse handles those.
+Plugin-based passthru extractor for the Looker v4.0 API. Authenticate, dispatch to a plugin, validate the API response against the plugin's swagger-generated pydantic types, and emit the natural nested shape as JSONL or Parquet. The reference plugin (`lookml_fields`) ships in-tree; third-party plugins ship as separate pip packages and are discovered via Python entry-points.
 
-Think **meltano for Looker**: a single-responsibility tap built around Looker's v4.0 OpenAPI surface.
+Think **dbt for Looker extraction**: a core harness + an SDK + plugins. Each plugin owns one Looker entity (explore fields, dashboards, looks, scheduled plans, ...) and produces one row per record, passthru-shaped from the Looker API.
 
-> v0.3.0a0 is the first alpha of the post-pivot architecture. Phase 1 (shipped): passthru shape for `explore_field`. Phase 2 (in progress): per-entity dispatch (dashboards, looks, queries, models, content). Phase 3+ adds Singer-protocol output and Meltano Hub registration.
+> v0.3.0a0 is the first alpha of the plugin platform. The reference plugin `lookml_fields` is fully wired and live-verified against a 12,731-row Joon-instance baseline. Additional in-tree plugins land in Phase 4 (priority order: roles → users → looks → scheduled_plans → folders → user_attributes).
 
 ## What you get
 
-- One row per Looker entity (currently `explore_field`; `dashboard`, `look`, `query`, `model` queued for Phase 2)
-- Native nested shape preserved -- `enumerations`, `time_interval`, `map_layer`, `sql_case`, `links`, `drill_fields` stay as structs/arrays, not stringified
-- Minimal lineage envelope (`_extract_model_name`, `_extract_explore_name`, `_extract_explore_project_name`, `_extract_field_category`) so warehouse joins don't have to walk nested dicts
-- Pydantic tripwire on every response -- API drift surfaces at extract time, not warehouse load time
-- Per-instance manifest override layer (`extra_fields`, `type_overrides`) -- narrow type widening for instance-specific drift, no projection contract
-
-## Use cases
-
-| Want | Path |
-|---|---|
-| Build a Looker field catalog in BigQuery / Snowflake / Redshift | `extract --format parquet`, `bq load` / `COPY` |
-| Power dbt models off Looker metadata | `extract --format jsonl` into a stage table, model in dbt |
-| Inventory dashboards / looks / queries for a Looker audit | (Phase 2) `extract dashboard`, `extract look`, ... |
-| Diff Looker state across environments | Two extracts, `diff` the JSONL or use DuckDB JOIN |
-| Detect refinement / extends drift across explores | Pure SQL on the passthru shape -- see `docs/EXAMPLES.md` (queued) |
+- **One row per Looker entity** (currently `explore_field` via the reference plugin; more plugins queued)
+- **Native nested shape preserved** — `enumerations`, `time_interval`, `map_layer`, `sql_case`, `links`, `drill_fields` stay as structs/arrays, not stringified
+- **Minimal lineage envelope** (`_extract_<key>` keys per plugin) so warehouse joins don't have to walk nested dicts
+- **Pydantic tripwire** on every API response — drift surfaces at extract time, not warehouse load time
+- **Per-instance manifest override layer** (`extra_fields`, `type_overrides`) — narrow type widening for instance-specific drift, no projection contract
+- **Plugin SDK** as a separate `looker-extractor-sdk` pip package — plugin authors depend on a minimal ABI, not the full core
+- **Entry-points discovery** — third-party plugins (`pip install looker-extractor-plugin-<name>`) auto-register; no core code changes needed
 
 ## Install
 
 ```bash
-pip install looker-fields
+pip install looker-extractor
 # or with uv
-uv pip install looker-fields
+uv pip install looker-extractor
 ```
 
 ## Setup
@@ -45,27 +37,36 @@ LOOKER_CLIENT_SECRET=...
 
 ```bash
 # Show what your instance has
-looker-fields info
+looker-extractor info
 
-# Extract all explore fields (JSONL default)
-looker-fields extract --output fields.jsonl
+# List installed plugins (default install bundles lookml_fields)
+looker-extractor plugins list
+
+# Show metadata for one plugin
+looker-extractor plugins info lookml_fields
+
+# Run the default plugin (lookml_fields) — JSONL
+looker-extractor extract --output fields.jsonl
+
+# Same, explicit plugin selection + short alias `lx`
+lx extract --plugin lookml_fields --output fields.jsonl
 
 # Parquet for warehouse load
-looker-fields extract --format parquet --output fields.parquet
+looker-extractor extract --format parquet --output fields.parquet
 
 # Filter to one model / explore
-looker-fields extract --model thelook --explore order_items --output one.jsonl
+looker-extractor extract --model thelook --explore order_items --output one.jsonl
 
 # Dump one explore's raw API JSON for offline debugging
-looker-fields dump thelook order_items --output dump.json
+looker-extractor dump thelook order_items --output dump.json
 
 # Pull the live swagger (cache for future codegen)
-looker-fields refresh-schema
+looker-extractor refresh-schema
 ```
 
-## Output shape
+## Output shape (reference plugin `lookml_fields`)
 
-One row per field, passthru-shaped from the LookmlModelExploreField pydantic model. Nested structures preserved:
+One row per field, passthru-shaped from the `LookmlModelExploreField` pydantic model. Nested structures preserved:
 
 ```json
 {
@@ -99,10 +100,10 @@ WHERE _extract_field_category = 'dimension';
 
 ## Per-instance manifest overrides
 
-If your Looker instance returns fields the swagger doesn't declare (every instance has some -- `convert_tz`, `synonyms`, `lookml_expression`, etc.), document them in a per-instance manifest:
+If your Looker instance returns fields the swagger doesn't declare (every instance has some — `convert_tz`, `synonyms`, `lookml_expression`, etc.), document them in a per-instance manifest:
 
 ```yaml
-# ~/.config/looker-fields/manifest.yaml
+# ~/.config/looker-extractor/manifest.yaml
 schema_version: "2.0"
 entity: explore_field
 extra_fields:
@@ -112,56 +113,76 @@ type_overrides:
   times_used: "int | str | None"   # some instances return string here
 ```
 
-Resolution chain (first hit wins): `--manifest-path` flag > `LOOKER_FIELDS_MANIFEST` env > `~/.config/looker-fields/manifest.yaml` > bundled default (empty).
+Resolution chain (first hit wins): `--manifest-path` flag > `LOOKER_FIELDS_MANIFEST` env > `~/.config/looker-extractor/manifest.yaml` > bundled default (empty).
 
 Runtime catches extra fields via pydantic `extra="allow"` regardless; the manifest is for visibility + future codegen widening.
 
 ## Schema discovery
 
 ```bash
-# Fetch live swagger from your instance; cached to ~/.config/looker-fields/swagger.json
-looker-fields refresh-schema
+# Fetch live swagger from your instance; cached to ~/.config/looker-extractor/swagger.json
+looker-extractor refresh-schema
 
 # Override per-invocation
-LOOKER_SWAGGER_PATH=/path/to/swagger.json looker-fields extract --output fields.jsonl
+LOOKER_SWAGGER_PATH=/path/to/swagger.json looker-extractor extract --output fields.jsonl
 ```
 
-## Architecture
+## Plugin architecture
 
 ```
-src/looker_fields/
-├── cli.py            # typer CLI -- extract / dump / refresh-schema / info
-├── config.py         # .env + Settings (pydantic-settings)
-├── client.py         # async httpx client w/ rate limit + token auth
-├── extract.py        # passthru: LookmlModelExploreField.model_validate → model_dump
-├── output.py         # JsonlWriter + ParquetWriter (dict-based)
-├── manifest/         # per-instance override layer (NOT projection)
-│   ├── schema.py     #   ManifestSpec: schema_version + entity + extra_fields + type_overrides
-│   ├── loader.py     #   4-step resolution (CLI > env > XDG > bundled)
-│   └── fields.yaml   #   bundled scaffold -- empty extra_fields/type_overrides
-└── _swagger/         # generated pydantic types from live swagger
-    ├── types.py      #   21 pydantic classes (extra="allow")
-    ├── loader.py     #   resolution chain mirrors manifest loader
-    └── baseline.json #   bundled OpenAPI 3.0 subset
+looker-extractor/                    # CLI + core harness
+  src/looker_extractor/
+    cli.py                           # typer: extract / dump / refresh-schema / info / plugins {list,info}
+    core/
+      client.py                      # async httpx client w/ rate limit + token auth
+      config.py                      # .env + Settings (pydantic-settings)
+      manifest/                      # per-instance override layer (NOT projection)
+      swagger/                       # 4-step swagger loader (CLI > env > XDG > bundled)
+    plugins/
+      lookml_fields/                 # reference plugin (in-tree)
+        plugin.py                    # LookmlFieldsPlugin(Plugin) wrapper
+        extract.py                   # async generator over (model, explore) pairs
+        manifest.yaml                # bundled manifest scaffold
+        swagger/                     # plugin-specific swagger types + baseline
+    registry/
+      discover.py                    # entry-points scan (group: looker_extractor.plugins)
+
+looker-extractor-sdk/                # separate pip package
+  src/looker_extractor_sdk/
+    plugin.py                        # Plugin ABC + stamp_lineage helper (minimal ABI)
 ```
+
+Third-party plugin authors depend on `looker-extractor-sdk` only (pydantic-only deps); their package declares the plugin entry-point:
+
+```toml
+# my-plugin/pyproject.toml
+[project.entry-points."looker_extractor.plugins"]
+my_plugin = "my_plugin.plugin:MyPlugin"
+```
+
+`pip install my-looker-plugin` makes it available as `looker-extractor extract --plugin my_plugin`. No core modification needed.
 
 ## Roadmap
 
-| Version | Surface | Status |
+| Phase | Surface | Status |
 |---|---|---|
-| v0.3.0a0 | Phase 1 -- explore_field passthru | ✅ |
-| v0.3.0 | Phase 2 -- per-entity dispatch (dashboards / looks / queries / models / content) | in progress |
-| v0.3.x | Phase 3 -- ParquetWriter explicit nested schema (from pydantic) | queued |
-| v0.4.0 | Singer-protocol output mode (`--format singer`) for Meltano compat | stretch |
-| v0.5.0 | Register on MeltanoHub as `tap-looker-v4` (succeeds the deprecated v3.1 tap) | stretch |
+| Phase 1 (v0.3.0a0) | uv workspace + plugin platform + lookml_fields reference | ✅ shipped LOCAL |
+| Phase 2 | SDK extraction as standalone PyPI release + per-package release workflows | next |
+| Phase 3 | Copier scaffold for `plugins init <name>` | queued |
+| Phase 4 | In-tree plugins: roles → users → looks → scheduled_plans → folders → user_attributes | queued |
+| Phase 5 | Plugin Hub JSON + `plugins search/install` | queued |
+| Phase 6 | Sandbox mode `plugins sandbox <name>` via uvx | queued |
+| Phase 7 | YAML-only plugin loader (no Python required for simple extractors) | queued |
+| Phase 8 | Conformance harness `looker-extractor-tests-plugin` + v1.0 tag + PyPI publish | queued |
 
 ## Contributing
 
 ```bash
 # Run the full suite
-pytest tests/ -v
+uv sync --extra dev
+.venv/bin/pytest packages/looker-extractor/tests/ -v
 ```
 
 ## License
 
-Apache 2.0. See `pyproject.toml`. (LICENSE file pending -- issue tracked.)
+Apache 2.0. See `pyproject.toml`. (LICENSE file pending — issue tracked.)

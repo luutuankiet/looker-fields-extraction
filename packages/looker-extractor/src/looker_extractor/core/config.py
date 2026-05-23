@@ -36,11 +36,6 @@ class Settings(BaseSettings):
         description="Override path to swagger.json (env: LOOKER_SWAGGER_PATH)",
     )
 
-    # BigQuery (optional)
-    bq_project: Optional[str] = Field(None, description="BigQuery project ID")
-    bq_dataset: Optional[str] = Field(None, description="BigQuery dataset name")
-    bq_table: Optional[str] = Field(None, description="BigQuery table name")
-
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @property
