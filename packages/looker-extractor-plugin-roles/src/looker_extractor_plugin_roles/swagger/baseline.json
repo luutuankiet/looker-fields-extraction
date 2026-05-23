@@ -1,0 +1,269 @@
+{
+  "components": {
+    "schemas": {
+      "Error": {
+        "properties": {
+          "documentation_url": {
+            "description": "Documentation link",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "message": {
+            "description": "Error details",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "required": [
+          "message",
+          "documentation_url"
+        ],
+        "x-looker-status": "stable"
+      },
+      "ModelSet": {
+        "properties": {
+          "all_access": {
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "built_in": {
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Operations the current user is able to perform on this object",
+            "readOnly": true,
+            "type": "object",
+            "x-looker-nullable": false
+          },
+          "id": {
+            "description": "Unique Id",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "name": {
+            "description": "Name of ModelSet",
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "url": {
+            "description": "Link to get this item",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "PermissionSet": {
+        "properties": {
+          "all_access": {
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "built_in": {
+            "readOnly": true,
+            "type": "boolean",
+            "x-looker-nullable": false
+          },
+          "can": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Operations the current user is able to perform on this object",
+            "readOnly": true,
+            "type": "object",
+            "x-looker-nullable": false
+          },
+          "id": {
+            "description": "Unique Id",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "name": {
+            "description": "Name of PermissionSet",
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "url": {
+            "description": "Link to get this item",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "Role": {
+        "properties": {
+          "can": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Operations the current user is able to perform on this object",
+            "readOnly": true,
+            "type": "object",
+            "x-looker-nullable": false
+          },
+          "id": {
+            "description": "Unique Id",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": false
+          },
+          "model_set": {
+            "$ref": "#/components/schemas/ModelSet",
+            "description": "(Read only) Model set",
+            "readOnly": true,
+            "x-looker-nullable": true
+          },
+          "model_set_id": {
+            "description": "(Write-Only) Id of model set",
+            "type": "string",
+            "x-looker-nullable": true,
+            "x-looker-write-only": true
+          },
+          "name": {
+            "description": "Name of Role",
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "permission_set": {
+            "$ref": "#/components/schemas/PermissionSet",
+            "description": "(Read only) Permission set",
+            "readOnly": true,
+            "x-looker-nullable": true
+          },
+          "permission_set_id": {
+            "description": "(Write-Only) Id of permission set",
+            "type": "string",
+            "x-looker-nullable": true,
+            "x-looker-write-only": true
+          },
+          "url": {
+            "description": "Link to get this item",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "users_url": {
+            "description": "Link to get list of users with this role",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "x-looker-status": "stable"
+      },
+      "ValidationError": {
+        "properties": {
+          "documentation_url": {
+            "description": "Documentation link",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "errors": {
+            "description": "Error detail array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationErrorDetail"
+            },
+            "readOnly": true,
+            "type": "array",
+            "x-looker-nullable": true
+          },
+          "message": {
+            "description": "Error details",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "required": [
+          "message",
+          "documentation_url"
+        ],
+        "x-looker-status": "stable"
+      },
+      "ValidationErrorDetail": {
+        "properties": {
+          "code": {
+            "description": "Error code",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "documentation_url": {
+            "description": "Documentation link",
+            "format": "uri-reference",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "field": {
+            "description": "Field with error",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          },
+          "message": {
+            "description": "Error info message",
+            "readOnly": true,
+            "type": "string",
+            "x-looker-nullable": true
+          }
+        },
+        "required": [
+          "documentation_url"
+        ],
+        "x-looker-status": "stable"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "Looker Team",
+      "url": "https://help.looker.com"
+    },
+    "description": "\nAPI 4.0 is the current release of the Looker API. API 3.x has been removed.\n\n### Authorization\n\nThe classic method of API authorization uses Looker **API** credentials for authorization and access control.\nLooker admins can create API credentials on Looker's **Admin/Users** page.\n\nAPI 4.0 adds additional ways to authenticate API requests, including OAuth and CORS requests.\n\nFor details, see [Looker API Authorization](https://cloud.google.com/looker/docs/r/api/authorization).\n\n\n### API Explorer\n\nThe API Explorer is a Looker-provided utility with many new and unique features for learning and using the Looker API and SDKs.\n\nFor details, see the [API Explorer documentation](https://cloud.google.com/looker/docs/r/api/explorer).\n\n\n### Looker Language SDKs\n\nThe Looker API is a RESTful system that should be usable by any programming language capable of making\nHTTPS requests. SDKs for a variety of programming languages are also provided to streamline using the API. Looker\nhas an OpenSource [sdk-codegen project](https://github.com/looker-open-source/sdk-codegen) that provides several\nlanguage SDKs. Language SDKs generated by `sdk-codegen` have an Authentication manager that can automatically\nauthenticate API requests when needed.\n\nFor details on available Looker SDKs, see [Looker API Client SDKs](https://cloud.google.com/looker/docs/r/api/client_sdks).\n\n\n### API Versioning\n\nFuture releases of Looker expand the latest API version release-by-release to securely expose more and more of the core\npower of the Looker platform to API client applications. API endpoints marked as \"beta\" may receive breaking changes without\nwarning (but we will try to avoid doing that). Stable (non-beta) API endpoints should not receive breaking\nchanges in future releases.\n\nFor details, see [Looker API Versioning](https://cloud.google.com/looker/docs/r/api/versioning).\n\n\n### In This Release\n\nAPI 4.0 is the only supported API version for Looker starting with release 23.18. API 3.0 and 3.1 have been removed.\n\nAPI 4.0 has better support for strongly typed languages like TypeScript, Kotlin, Swift, Go, C#, and more.\n\nSee the [API 4.0 GA announcement](https://developers.looker.com/api/advanced-usage/version-4-ga) for more information\nabout API 4.0.\n\nThe API Explorer can be used to [interactively compare](https://cloud.google.com/looker/docs/r/api/explorer#comparing_api_versions) the differences between API 3.1 and 4.0.\n\n\n### API and SDK Support Policies\n\nLooker API versions and language SDKs have varying support levels. Please read the API and SDK\n[support policies](https://cloud.google.com/looker/docs/r/api/support-policy) for more information.\n\n\n",
+    "license": {
+      "name": "EULA",
+      "url": "https://example.looker.com/eula"
+    },
+    "title": "Looker API 4.0 Reference",
+    "version": "4.0.25.8",
+    "x-looker-release-version": "25.8.15"
+  },
+  "openapi": "3.0.0",
+  "paths": {}
+}

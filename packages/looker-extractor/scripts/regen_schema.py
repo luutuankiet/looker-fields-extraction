@@ -25,24 +25,43 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = ROOT / "looker_40_openapi.json"
-DEFAULT_OUTPUT_DIR = ROOT / "src" / "looker_extractor" / "plugins" / "lookml_fields" / "swagger"
 
-# Entry-point definitions for field extraction.
+# Plugin -> (output_dir, seed types) registry. New plugins add an entry here.
 # Transitive $refs are reached automatically by BFS over collect_refs().
-SEED_DEFINITIONS = [
-    "LookmlModelExplore",
-    "LookmlModelExploreField",
-    "LookmlModelExploreFieldset",
-    "LookmlModelExploreJoins",
-    "LookmlModelExploreAlwaysFilter",
-    "LookmlModelExploreAccessFilter",
-    "LookmlModelExploreConditionallyFilter",
-    "LookmlModelExploreError",
-    "LookmlModelNavExploreField",
-    "LookmlModelExploreSupportedMeasureType",
-    "Error",
-    "ValidationError",
-]
+# output_dir is computed relative to ROOT (= packages/looker-extractor); ROOT.parent
+# is `packages/`, so sibling-package plugins land at ROOT.parent/<pkg-dir>/...
+PLUGIN_REGISTRY: dict[str, dict[str, Any]] = {
+    "lookml_fields": {
+        "output_dir": ROOT / "src" / "looker_extractor" / "plugins" / "lookml_fields" / "swagger",
+        "seeds": [
+            "LookmlModelExplore",
+            "LookmlModelExploreField",
+            "LookmlModelExploreFieldset",
+            "LookmlModelExploreJoins",
+            "LookmlModelExploreAlwaysFilter",
+            "LookmlModelExploreAccessFilter",
+            "LookmlModelExploreConditionallyFilter",
+            "LookmlModelExploreError",
+            "LookmlModelNavExploreField",
+            "LookmlModelExploreSupportedMeasureType",
+            "Error",
+            "ValidationError",
+        ],
+    },
+    "roles": {
+        "output_dir": (
+            ROOT.parent / "looker-extractor-plugin-roles" / "src"
+            / "looker_extractor_plugin_roles" / "swagger"
+        ),
+        "seeds": [
+            "Role",
+            "PermissionSet",
+            "ModelSet",
+            "Error",
+            "ValidationError",
+        ],
+    },
+}
 
 
 def collect_refs(node: Any, found: set[str]) -> None:
@@ -165,20 +184,35 @@ def patch_extra_allow(types_py: Path) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--plugin",
+        default="lookml_fields",
+        choices=sorted(PLUGIN_REGISTRY),
+        help="Plugin to regenerate swagger for (default: lookml_fields).",
+    )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Override output dir (default: derived from --plugin via PLUGIN_REGISTRY).",
+    )
     args = parser.parse_args(argv)
+
+    plugin_cfg = PLUGIN_REGISTRY[args.plugin]
+    output_dir: Path = args.output_dir or plugin_cfg["output_dir"]
+    seeds: list[str] = plugin_cfg["seeds"]
 
     if not args.input.exists():
         print(f"missing input swagger: {args.input}", file=sys.stderr)
         return 2
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    baseline_json = args.output_dir / "baseline.json"
-    types_py = args.output_dir / "types.py"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    baseline_json = output_dir / "baseline.json"
+    types_py = output_dir / "types.py"
 
     raw = json.loads(args.input.read_text())
-    subset = strip_to_subset(raw, SEED_DEFINITIONS)
+    subset = strip_to_subset(raw, seeds)
 
     baseline_json.write_text(json.dumps(subset, indent=2, sort_keys=True))
     schemas = subset.get("components", {}).get("schemas", {})

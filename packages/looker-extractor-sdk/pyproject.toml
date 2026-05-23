@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "looker-extractor-sdk"
-version = "0.1.0a0"
+version = "0.1.0"
 description = "Plugin SDK for looker-extractor (Plugin Protocol + helpers)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,6 +22,19 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/looker_extractor_sdk"]
+
+[tool.hatch.build.targets.wheel.force-include]
+# Ship AUTHORING.md in the wheel under looker_extractor_sdk/ so installed users
+# can `importlib.resources.files('looker_extractor_sdk').joinpath('AUTHORING.md')`.
+"AUTHORING.md" = "looker_extractor_sdk/AUTHORING.md"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/looker_extractor_sdk",
+  "AUTHORING.md",
+  "README.md",
+  "pyproject.toml",
+]
 
 [tool.ruff]
 target-version = "py311"

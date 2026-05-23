@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "looker-extractor-plugin-roles"
+version = "0.1.0a0"
+description = "looker-extractor plugin: extract Looker roles + permission/model sets (uses /api/4.0/roles)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Joon Solutions"},
+]
+dependencies = [
+    "looker-extractor-sdk>=0.1.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.uv.sources]
+# Resolve SDK from the workspace at dev time; published wheel uses PyPI
+# (build with `uv build --package looker-extractor-plugin-roles --no-sources`).
+looker-extractor-sdk = { workspace = true }
+
+[project.entry-points."looker_extractor.plugins"]
+roles = "looker_extractor_plugin_roles.plugin:RolesPlugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/looker_extractor_plugin_roles"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
