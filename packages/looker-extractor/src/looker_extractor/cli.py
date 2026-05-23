@@ -1,4 +1,4 @@
-"""CLI entry point for looker-fields.
+"""CLI entry point for looker-extractor.
 
 Post-pivot surface (v0.3.0a0):
   extract        -- stream explore-field passthru dicts to JSONL or Parquet
@@ -22,7 +22,7 @@ from typing import Optional
 import typer
 
 app = typer.Typer(
-    name="looker-fields",
+    name="looker-extractor",
     help="Extract entity metadata from any Looker instance via the API (passthru).",
     no_args_is_help=True,
 )

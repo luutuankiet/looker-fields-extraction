@@ -6,7 +6,7 @@ Public surface:
     user_config_path() -> Path — XDG location for user-managed override
     write_user_config(spec) -> Path — persist a fresh spec to the XDG location
 
-Generated Pydantic v2 types live in ``looker_fields._swagger.types``.
+Generated Pydantic v2 types live in ``looker_extractor._swagger.types``.
 """
 
 from __future__ import annotations

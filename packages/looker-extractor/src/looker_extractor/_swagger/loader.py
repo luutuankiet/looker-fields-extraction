@@ -3,8 +3,8 @@
 Precedence (first hit wins):
     1. cli_override          — ``--swagger-path PATH`` CLI flag
     2. LOOKER_SWAGGER_PATH   — env var
-    3. XDG user config       — ``~/.config/looker-fields/swagger.json`` (via platformdirs)
-    4. bundled baseline      — ``looker_fields._swagger.baseline.json`` (importlib.resources)
+    3. XDG user config       — ``~/.config/looker-extractor/swagger.json`` (via platformdirs)
+    4. bundled baseline      — ``looker_extractor._swagger.baseline.json`` (importlib.resources)
 
 Env beats XDG by design: env is the explicit per-invocation override; XDG is the
 "installed once, persists" config. CLI flag beats env because the flag is the most
@@ -23,7 +23,7 @@ from typing import Any
 
 import platformdirs
 
-APP_NAME = "looker-fields"
+APP_NAME = "looker-extractor"
 ENV_VAR = "LOOKER_SWAGGER_PATH"
 BUNDLED_FILENAME = "baseline.json"
 
@@ -47,7 +47,7 @@ class SwaggerSource:
 
 
 def user_config_path() -> Path:
-    """XDG-aware user config path: ~/.config/looker-fields/swagger.json on Linux."""
+    """XDG-aware user config path: ~/.config/looker-extractor/swagger.json on Linux."""
     return Path(platformdirs.user_config_dir(APP_NAME, appauthor=False)) / "swagger.json"
 
 
@@ -57,7 +57,7 @@ def _bundled_path() -> Path:
     Uses importlib.resources to support zip-installed packages.
     """
     # files() returns a Traversable; for a real on-disk install this resolves cleanly.
-    return Path(str(resources.files("looker_fields._swagger").joinpath(BUNDLED_FILENAME)))
+    return Path(str(resources.files("looker_extractor._swagger").joinpath(BUNDLED_FILENAME)))
 
 
 def resolve_swagger_source(cli_override: Path | None = None) -> SwaggerSource:

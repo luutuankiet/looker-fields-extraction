@@ -1,14 +1,14 @@
 """Manifest loader with explicit 4-step resolution chain.
 
-Mirrors src/looker_fields/_swagger/loader.py — the manifest YAML and the
+Mirrors src/looker_extractor/_swagger/loader.py — the manifest YAML and the
 swagger JSON share the same precedence/source pattern by design (one mental
 model for all bundled-with-override config artifacts).
 
 Precedence (first hit wins):
     1. cli_override            — ``--manifest-path PATH`` CLI flag
     2. LOOKER_FIELDS_MANIFEST  — env var
-    3. XDG user config         — ``~/.config/looker-fields/manifest.yaml``
-    4. bundled default         — ``looker_fields.manifest.fields.yaml``
+    3. XDG user config         — ``~/.config/looker-extractor/manifest.yaml``
+    4. bundled default         — ``looker_extractor.manifest.fields.yaml``
 
 Env beats XDG by design: env is the explicit per-invocation override; XDG is
 the "installed once, persists" config. CLI flag beats env because the flag
@@ -27,7 +27,7 @@ from typing import Any
 import platformdirs
 import yaml
 
-APP_NAME = "looker-fields"
+APP_NAME = "looker-extractor"
 ENV_VAR = "LOOKER_FIELDS_MANIFEST"
 BUNDLED_FILENAME = "fields.yaml"
 
@@ -51,7 +51,7 @@ class ManifestSource:
 
 
 def user_config_path() -> Path:
-    """XDG-aware user config path: ~/.config/looker-fields/manifest.yaml on Linux."""
+    """XDG-aware user config path: ~/.config/looker-extractor/manifest.yaml on Linux."""
     return Path(platformdirs.user_config_dir(APP_NAME, appauthor=False)) / "manifest.yaml"
 
 
@@ -60,7 +60,7 @@ def _bundled_path() -> Path:
 
     Uses importlib.resources to support zip-installed packages.
     """
-    return Path(str(resources.files("looker_fields.manifest").joinpath(BUNDLED_FILENAME)))
+    return Path(str(resources.files("looker_extractor.manifest").joinpath(BUNDLED_FILENAME)))
 
 
 def resolve_manifest_source(cli_override: Path | None = None) -> ManifestSource:

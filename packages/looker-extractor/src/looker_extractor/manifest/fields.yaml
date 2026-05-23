@@ -15,7 +15,7 @@
 #
 # This default ships empty -- a clean Looker instance needs no overrides.
 # Per-instance manifests should be placed at
-#   ~/.config/looker-fields/manifest.yaml
+#   ~/.config/looker-extractor/manifest.yaml
 # or pointed at via $LOOKER_FIELDS_MANIFEST or --manifest-path.
 
 schema_version: "2.0"

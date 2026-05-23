@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from looker_fields.manifest import (
+from looker_extractor.manifest import (
     CURRENT_SCHEMA_VERSION,
     ManifestSourceKind,
     ManifestSpec,
@@ -98,7 +98,7 @@ def test_missing_env_target_raises(
 def test_user_config_path_under_app_name() -> None:
     p = user_config_path()
     assert p.name == "manifest.yaml"
-    assert "looker-fields" in str(p)
+    assert "looker-extractor" in str(p)
 
 
 def test_extra_fields_and_overrides_round_trip(tmp_path: Path) -> None:
