@@ -11,6 +11,7 @@ members = [
     "looker-extractor",
     "looker-extractor-plugin-roles",
     "looker-extractor-sdk",
+    "looker-extractor-tests-plugin",
 ]
 
 [[package]]
@@ -464,6 +465,23 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.0" }]
+
+[[package]]
+name = "looker-extractor-tests-plugin"
+version = "0.1.0a0"
+source = { editable = "packages/looker-extractor-tests-plugin" }
+dependencies = [
+    { name = "looker-extractor-sdk" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "looker-extractor-sdk", editable = "packages/looker-extractor-sdk" },
+    { name = "pytest", specifier = ">=7.0" },
+    { name = "pytest-asyncio", specifier = ">=0.21" },
+]
 
 [[package]]
 name = "looker-sdk"
